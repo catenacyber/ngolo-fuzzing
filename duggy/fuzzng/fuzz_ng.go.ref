@@ -1,0 +1,171 @@
+
+//go:build gofuzz
+
+package fuzz_ng
+
+import (
+	"fmt"
+	"io"
+	"log"
+	"os"
+	"time"
+
+	"google.golang.org/protobuf/proto"
+
+	"github.com/catenacyber/ngolo-fuzzing/duggy"
+	"net"
+
+)
+
+type FuzzingConn struct {
+	buf []byte
+	offset int
+}
+
+func (c *FuzzingConn) Read(b []byte) (n int, err error) {
+	if c.offset >= len(c.buf) {
+		return 0, io.EOF
+	}
+	if len(b) < len(c.buf) + c.offset {
+		copy(b, c.buf[c.offset:])
+		c.offset += len(b)
+		return len(b), nil
+	}
+	copy(b, c.buf[c.offset:])
+	r := len(c.buf) - c.offset
+	c.offset = len(c.buf)
+	return r, nil
+}
+
+func (c *FuzzingConn) Write(b []byte) (n int, err error) {
+	return len(b), nil
+}
+
+func (c *FuzzingConn) Close() error {
+	c.offset = len(c.buf)
+	return nil
+}
+
+type FuzzingAddr struct {}
+
+func (c *FuzzingAddr) Network() string {
+	return "fuzz_addr_net"
+}
+
+func (c *FuzzingAddr) String() string {
+	return "fuzz_addr_string"
+}
+
+func (c *FuzzingConn) LocalAddr() net.Addr {
+	return &FuzzingAddr{}
+}
+
+func (c *FuzzingConn) RemoteAddr() net.Addr {
+	return &FuzzingAddr{}
+}
+
+func (c *FuzzingConn) SetDeadline(t time.Time) error {
+	return nil
+}
+
+func (c *FuzzingConn) SetReadDeadline(t time.Time) error {
+	return nil
+}
+
+func (c *FuzzingConn) SetWriteDeadline(t time.Time) error {
+	return nil
+}
+
+func CreateFuzzingConn(a []byte) *FuzzingConn {
+	r := &FuzzingConn{}
+	r.buf = a
+	return r
+}
+
+func ConvertIntArray(a []int64) []int {
+	r := make([]int, len(a))
+	for i := range a {
+		r[i] = int(a[i])
+	}
+	return r
+}
+
+func GetRune(s string) rune {
+	for _,c := range s {
+		return c
+	}
+	return '\x00'
+}
+
+func FuzzNG_valid(data []byte) int {
+	gen := &NgoloFuzzList{}
+	err := proto.Unmarshal(data, gen)
+	if err != nil {
+		panic("Failed to unmarshal LPM generated variables")
+	}
+	return FuzzNG_List(gen)
+}
+
+// we are unsure the input is a valid protobuf
+func FuzzNG_unsure(data []byte) int {
+	gen := &NgoloFuzzList{}
+	err := proto.Unmarshal(data, gen)
+	if err != nil {
+		return 0
+	}
+	return FuzzNG_List(gen)
+}
+
+var initialized bool
+
+func FuzzNG_List(gen *NgoloFuzzList) int {
+	if !initialized {
+		repro := os.Getenv("FUZZ_NG_REPRODUCER")
+		if len(repro) > 0 {
+			f, err := os.Create(repro)
+			if err != nil {
+				log.Fatalf("Failed to open %s : %s", repro, err)
+			} else {
+				PrintNG_List(gen, f)
+			}
+		}
+		initialized = true
+	}
+	var ProcessorResults []*duggy.Processor
+	ProcessorResultsIndex := 0
+	for l := range gen.List {
+		switch a := gen.List[l].Item.(type) {
+		case *NgoloFuzzOne_CreateProcessor:
+			r0 := duggy.CreateProcessor(a.CreateProcessor.Options)
+			if r0 != nil{
+				ProcessorResults = append(ProcessorResults, r0)
+			}
+		case *NgoloFuzzOne_Process:
+			if len(ProcessorResults) == 0 {
+				continue
+			}
+			arg0 := ProcessorResults[ProcessorResultsIndex]
+			ProcessorResultsIndex = (ProcessorResultsIndex + 1) % len(ProcessorResults)
+			duggy.Process(arg0, a.Process.Data)
+		}
+	}
+	return 1
+}
+
+func PrintNG_List(gen *NgoloFuzzList, w io.StringWriter) {
+	ProcessorNb := 0
+	ProcessorResultsIndex := 0
+	for l := range gen.List {
+		switch a := gen.List[l].Item.(type) {
+		case *NgoloFuzzOne_CreateProcessor:
+			w.WriteString(fmt.Sprintf("Processor%d := duggy.CreateProcessor(%#+v)\n", ProcessorNb, a.CreateProcessor.Options))
+			ProcessorNb = ProcessorNb + 1
+		case *NgoloFuzzOne_Process:
+			if ProcessorNb == 0 {
+				continue
+			}
+			w.WriteString(fmt.Sprintf("duggy.Process(Processor%d, %#+v)\n", ProcessorNb, a.Process.Data))
+			ProcessorResultsIndex = (ProcessorResultsIndex + 1) % ProcessorNb
+		}
+	}
+}

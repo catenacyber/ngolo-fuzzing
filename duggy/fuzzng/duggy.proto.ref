@@ -1,0 +1,18 @@
+syntax = "proto3";
+package ngolofuzz;
+option go_package = "./;fuzz_ng";
+
+message CreateProcessorArgs {
+  uint32 options = 1;
+}
+message ProcessArgs {
+  bytes data = 1;
+}
+
+message NgoloFuzzOne {
+  oneof item {
+    CreateProcessorArgs CreateProcessor = 1;
+    ProcessArgs Process = 2;
+  }
+}
+message NgoloFuzzList { repeated NgoloFuzzOne list = 1; }
