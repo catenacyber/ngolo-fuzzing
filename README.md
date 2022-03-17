@@ -93,3 +93,5 @@ TODOs
 * Add tests
 * Complete duggy for testing
 * Check all std library builds (like implement `io.ReadWriterCloser`)
+* Implement a more focused version on only one function, building the necessary arguments for it through code generation if needed
+
