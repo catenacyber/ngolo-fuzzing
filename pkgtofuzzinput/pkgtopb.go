@@ -192,6 +192,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"runtime/debug"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -287,6 +288,17 @@ func FuzzNG_valid(data []byte) int {
 	if err != nil {
 		panic("Failed to unmarshal LPM generated variables")
 	}
+	defer func() {
+		if r := recover(); r != nil {
+			switch r.(type) {
+			case string:
+			//do nothing
+			default:
+				fmt.Printf(string(debug.Stack()))
+				panic(r)
+			}
+		}
+	}()
 	return FuzzNG_List(gen)
 }
 
@@ -297,6 +309,17 @@ func FuzzNG_unsure(data []byte) int {
 	if err != nil {
 		return 0
 	}
+	defer func() {
+		if r := recover(); r != nil {
+			switch r.(type) {
+			case string:
+			//do nothing
+			default:
+				fmt.Printf(string(debug.Stack()))
+				panic(r)
+			}
+		}
+	}()
 	return FuzzNG_List(gen)
 }
 
