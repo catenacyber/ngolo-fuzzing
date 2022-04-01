@@ -5,6 +5,7 @@ bytes
 compress/bzip2
 compress/flate
 compress/gzip
+compress/lzw
 compress/zlib
 container/ring
 crypto/aes
@@ -19,7 +20,9 @@ crypto/sha1
 crypto/sha256
 crypto/sha512
 crypto/subtle
+crypto/x509
 database/sql
+debug/buildinfo
 debug/dwarf
 debug/elf
 debug/gosym
@@ -40,6 +43,8 @@ expvar
 go/ast
 go/build
 go/build/constraint
+go/constant
+go/doc
 go/format
 go/parser
 go/token
@@ -48,12 +53,15 @@ hash/crc32
 hash/crc64
 html
 html/template
+image
 image/gif
 image/jpeg
 image/png
 index/suffixarray
+io
 io/fs
 io/ioutil
+log
 log/syslog
 math/bits
 mime
