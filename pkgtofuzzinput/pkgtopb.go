@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"unicode"
 
@@ -182,28 +183,19 @@ func PackageToProtobuf(pkg *packages.Package, descr PkgDescription, w io.StringW
 	return nil
 }
 
-const fuzzTarget1 = `
-//go:build gofuzz
+const fuzzTarget1 = `//go:build gofuzz
 
 package %s
 
 import (
-	"fmt"
-	"io"
-	"log"
-	"os"
-	"runtime/debug"
-	"time"
-
 	"google.golang.org/protobuf/proto"
 
 `
 
-const fuzzTarget2 = `
-)
+const fuzzTarget2 = `)
 
 type FuzzingConn struct {
-	buf []byte
+	buf    []byte
 	offset int
 }
 
@@ -211,7 +203,7 @@ func (c *FuzzingConn) Read(b []byte) (n int, err error) {
 	if c.offset >= len(c.buf) {
 		return 0, io.EOF
 	}
-	if len(b) < len(c.buf) + c.offset {
+	if len(b) < len(c.buf)+c.offset {
 		copy(b, c.buf[c.offset:])
 		c.offset += len(b)
 		return len(b), nil
@@ -231,7 +223,7 @@ func (c *FuzzingConn) Close() error {
 	return nil
 }
 
-type FuzzingAddr struct {}
+type FuzzingAddr struct{}
 
 func (c *FuzzingAddr) Network() string {
 	return "fuzz_addr_net"
@@ -276,7 +268,7 @@ func ConvertIntArray(a []int64) []int {
 }
 
 func GetRune(s string) rune {
-	for _,c := range s {
+	for _, c := range s {
 		return c
 	}
 	return '\x00'
@@ -346,7 +338,13 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 	// import other package needed from args such as strings
 	toimport := make(map[string]bool)
 	toimport[pkg.ID] = true
+	toimport["fmt"] = true
+	toimport["io"] = true
+	toimport["log"] = true
 	toimport["net"] = true
+	toimport["os"] = true
+	toimport["runtime/debug"] = true
+	toimport["time"] = true
 	for _, m := range descr.Functions {
 		for a := range m.Args {
 			switch m.Args[a].Proto {
@@ -358,7 +356,13 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 			}
 		}
 	}
-	for k, _ := range toimport {
+	keys := make([]string, 0, len(toimport))
+	for k := range toimport {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
 		w.WriteString("\t\"" + k + "\"\n")
 	}
 	w.WriteString(fuzzTarget2)
