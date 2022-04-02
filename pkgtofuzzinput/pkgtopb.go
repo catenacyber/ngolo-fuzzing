@@ -286,7 +286,6 @@ func FuzzNG_valid(data []byte) int {
 			case string:
 			//do nothing
 			default:
-				fmt.Printf(string(debug.Stack()))
 				panic(r)
 			}
 		}
@@ -307,7 +306,6 @@ func FuzzNG_unsure(data []byte) int {
 			case string:
 			//do nothing
 			default:
-				fmt.Printf(string(debug.Stack()))
 				panic(r)
 			}
 		}
@@ -343,7 +341,6 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 	toimport["log"] = true
 	toimport["net"] = true
 	toimport["os"] = true
-	toimport["runtime/debug"] = true
 	toimport["time"] = true
 	for _, m := range descr.Functions {
 		for a := range m.Args {
