@@ -1,3 +1,5 @@
 regexp Must,Expand
 net/rpc HandleHTTP
 net/http ListenAndServe
+runtime Goexit
+runtime/debug SetMaxThreads
