@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	golang.org/x/tools v0.1.9
-	google.golang.org/protobuf v1.27.1
+	google.golang.org/protobuf v1.28.0
 )
 
 require (
