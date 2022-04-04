@@ -3,3 +3,5 @@ net/rpc HandleHTTP
 net/http ListenAndServe
 runtime Goexit
 runtime/debug SetMaxThreads
+html/template ParseGlob
+text/template ParseGlob
