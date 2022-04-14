@@ -1,7 +1,7 @@
 regexp Must,Expand
-net/rpc HandleHTTP
-net/http ListenAndServe
+net_rpc HandleHTTP
+net_http ListenAndServe
 runtime Goexit
-runtime/debug SetMaxThreads
-html/template ParseGlob
-text/template ParseGlob
+runtime_debug SetMaxThreads
+html_template ParseGlob
+text_template ParseGlob
