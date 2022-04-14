@@ -7,3 +7,4 @@ text_template ParseGlob
 path_filepath Glob
 math_bits Div
 encoding_binary PutUvarint
+bufio ScanBytes
