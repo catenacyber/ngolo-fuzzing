@@ -290,6 +290,7 @@ func FuzzNG_valid(data []byte) int {
 			}
 		}
 	}()
+	runtime.GC()
 	return FuzzNG_List(gen)
 }
 
@@ -310,6 +311,7 @@ func FuzzNG_unsure(data []byte) int {
 			}
 		}
 	}()
+	runtime.GC()
 	return FuzzNG_List(gen)
 }
 
@@ -342,6 +344,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 	toimport["net"] = true
 	toimport["os"] = true
 	toimport["time"] = true
+	toimport["runtime"] = true
 	for _, m := range descr.Functions {
 		for a := range m.Args {
 			switch m.Args[a].Proto {
