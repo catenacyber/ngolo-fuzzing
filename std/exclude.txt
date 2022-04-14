@@ -1,5 +1,4 @@
 regexp Must,Expand
-net_rpc HandleHTTP
 net_http ListenAndServe
 runtime Goexit
 runtime_debug SetMaxThreads
