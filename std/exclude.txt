@@ -1,10 +1,10 @@
 regexp Must,Expand
 net_http ListenAndServe
 runtime Goexit
-runtime_debug SetMaxThreads
+runtime_debug SetMaxThreads,SetMaxStack
 html_template ParseGlob
 text_template ParseGlob
 path_filepath Glob
 math_bits Div
-encoding_binary PutUvarint
+encoding_binary PutUvarint,PutVarint
 bufio ScanBytes
