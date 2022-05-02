@@ -339,7 +339,18 @@ func FuzzNG_List(gen *NgoloFuzzList) int {
 	}
 `
 
-func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.StringWriter, outdir string) error {
+func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.StringWriter, outdir string, limits string) error {
+
+	// maybe args parsing should be done earlier...
+	limitsList := strings.Split(limits, ",")
+	if len(limits) == 0 {
+		limitsList = limitsList[:0]
+	}
+	limitsMap := make(map[string]bool, len(limitsList))
+	for k := range limitsList {
+		limitsMap[limitsList[k]] = true
+	}
+
 	//maybe we should create AST and generate go from there
 	w.WriteString(fmt.Sprintf(fuzzTarget1, outdir))
 	// import other package needed from args such as strings
@@ -469,6 +480,12 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 			case PkgFuncArgClassPkgGen, PkgFuncArgClassProtoGen, PkgFuncArgClassPkgConst:
 				w.WriteString(fmt.Sprintf("arg%d", a))
 			}
+			// check if this parameter must be limited like rand.Prime.bits
+			_, ok := limitsMap[fmt.Sprintf("%s%s.%s", m.Recv, m.Name, m.Args[a].Name)]
+			if ok {
+				// constant is good enough for now
+				w.WriteString(" % 0x10001")
+			}
 		}
 		w.WriteString(")\n")
 		if useReturn {
@@ -570,6 +587,10 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 				w.WriteString(fmt.Sprintf("%s%%d", m.Args[a].FieldType))
 				formatArgs = append(formatArgs, fmt.Sprintf("%sNb", m.Args[a].FieldType))
 			}
+			_, ok := limitsMap[fmt.Sprintf("%s%s.%s", m.Recv, m.Name, m.Args[a].Name)]
+			if ok {
+				w.WriteString(" %% 0x10001")
+			}
 		}
 		w.WriteString(`)\n"`)
 		for _, f := range formatArgs {
@@ -597,7 +618,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 	return nil
 }
 
-func PackageToFuzzer(pkgname string, outdir string, exclude string) error {
+func PackageToFuzzer(pkgname string, outdir string, exclude string, limits string) error {
 	pkg, err := PackageFromName(pkgname)
 	if err != nil {
 		log.Printf("Failed loading package : %s", err)
@@ -639,7 +660,7 @@ func PackageToFuzzer(pkgname string, outdir string, exclude string) error {
 		log.Printf("Failed creating file : %s", err)
 		return err
 	}
-	err = PackageToFuzzTarget(pkg, descr, f, outdir)
+	err = PackageToFuzzTarget(pkg, descr, f, outdir, limits)
 	if err != nil {
 		return err
 	}

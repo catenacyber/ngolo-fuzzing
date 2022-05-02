@@ -8,6 +8,7 @@ import (
 )
 
 var exclude = flag.String("exclude", "", "comma-separated string pattern to exclude from functions")
+var limits = flag.String("limits", "", "comma-separated list of integer arguments to limit")
 
 func main() {
 	flag.Parse()
@@ -22,7 +23,7 @@ func main() {
 	} else {
 		log.Printf("Default to outdir in %s", outdir)
 	}
-	err := pkgtofuzzinput.PackageToFuzzer(path, outdir, *exclude)
+	err := pkgtofuzzinput.PackageToFuzzer(path, outdir, *exclude, *limits)
 	if err != nil {
 		log.Fatalf("Failed creating fuzz target : %s", err)
 	}
