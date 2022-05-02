@@ -1,0 +1,10 @@
+regexp -exclude Must,Expand
+net_http -exclude ListenAndServe
+runtime -exclude Goexit
+runtime_debug -exclude SetMaxThreads,SetMaxStack
+html_template -exclude ParseGlob
+text_template -exclude ParseGlob
+path_filepath -exclude Glob
+math_bits -exclude Div
+encoding_binary -exclude PutUvarint,PutVarint
+bufio -exclude ScanBytes
