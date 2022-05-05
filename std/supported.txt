@@ -12,6 +12,7 @@ crypto/aes
 crypto/des
 crypto/ecdsa
 crypto/ed25519
+crypto/elliptic
 crypto/hmac
 crypto/md5
 crypto/rand
