@@ -66,6 +66,7 @@ var ProtoGenerators = map[string]string{
 	"io.Reader":     "bytes.NewReader",
 	"io.Writer":     "bytes.NewBuffer",
 	"bufio.Reader":  "bytes.NewBuffer",
+	"big.Int":       "CreateBigInt",
 	"net.Conn":      "CreateFuzzingConn",
 	"int":           "int",
 	"rune":          "GetRune",
@@ -80,6 +81,7 @@ var ProtoGenerated = map[string]string{
 	"io.Reader":     "bytes",
 	"io.Writer":     "bytes",
 	"bufio.Reader":  "bytes",
+	"big.Int":       "bytes",
 	"net.Conn":      "bytes",
 	"int":           "int64",
 	"rune":          "string",
@@ -102,7 +104,6 @@ func GolangArgumentClassName(e ast.Expr) (PkgFuncArgClass, string) {
 		case "int", "rune", "byte", "uint8":
 			return PkgFuncArgClassProtoGen, i.Name
 		}
-		//case *ast.StarExpr:
 	case *ast.FuncType:
 		return PkgFuncArgClassUnhandled, ""
 	case *ast.Ellipsis:
@@ -135,6 +136,18 @@ func GolangArgumentClassName(e ast.Expr) (PkgFuncArgClass, string) {
 				return PkgFuncArgClassProto, "repeated float64"
 			case "string":
 				return PkgFuncArgClassProto, "repeated string"
+			}
+		}
+	case *ast.StarExpr:
+		switch i2 := i.X.(type) {
+		case *ast.SelectorExpr:
+			switch i3 := i2.X.(type) {
+			case *ast.Ident:
+				se := fmt.Sprintf("%s.%s", i3.Name, i2.Sel.Name)
+				switch se {
+				case "big.Int":
+					return PkgFuncArgClassProtoGen, se
+				}
 			}
 		}
 	case *ast.SelectorExpr:
@@ -268,6 +281,12 @@ func CreateFuzzingConn(a []byte) *FuzzingConn {
 	return r
 }
 
+func CreateBigInt(a []byte) *big.Int {
+	r := new(big.Int)
+	r.SetBytes(a)
+	return r
+}
+
 func ConvertIntArray(a []int64) []int {
 	r := make([]int, len(a))
 	for i := range a {
@@ -366,6 +385,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 	toimport["os"] = true
 	toimport["time"] = true
 	toimport["runtime"] = true
+	toimport["math/big"] = true
 	for _, m := range descr.Functions {
 		for a := range m.Args {
 			switch m.Args[a].Proto {
