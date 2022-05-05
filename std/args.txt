@@ -1,6 +1,6 @@
 regexp -exclude Must,Expand
 net_http -exclude ListenAndServe
-runtime -exclude Goexit
+runtime -exclude Goexit,ReadTrace -limits GOMAXPROCS
 runtime_debug -exclude SetMaxThreads,SetMaxStack
 html_template -exclude ParseGlob
 text_template -exclude ParseGlob
@@ -8,7 +8,10 @@ path_filepath -exclude Glob
 math_bits -exclude Div
 encoding_binary -exclude PutUvarint,PutVarint
 bufio -exclude ScanBytes -limits NewReaderSize.size
-container/ring -limits RingNgdotMove.n
-crypto/rand -limits Prime.bits
+container_ring -limits RingNgdotMove.n,New.n
+crypto_rand -limits Prime.bits
 strconv -limits FormatFloat.prec
 strings -limits Repeat.count
+bytes -limits Repeat.count
+io -exclude Pipe
+image -limits Rect.x1,Rect.y1
