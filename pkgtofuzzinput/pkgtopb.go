@@ -916,6 +916,9 @@ func PackageToProtobufMessagesDescription(pkg *packages.Package, exclude string)
 								papi.Proto = class
 								pfpm.Args = append(pfpm.Args, papi)
 							}
+						} else {
+							log.Printf("Function %s has unhandled recv %#+v", f.Name.Name, f.Recv.List[0])
+							continue
 						}
 					}
 					donotadd := false
