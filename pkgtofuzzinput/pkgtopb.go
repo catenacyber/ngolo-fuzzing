@@ -45,6 +45,7 @@ type PkgFuncResult struct {
 type PkgFunction struct {
 	Name    string
 	Recv    string
+	Suffix  string
 	Args    []PkgFuncArg
 	Returns []PkgFuncResult
 }
@@ -439,7 +440,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 	w.WriteString("\t\tswitch a := gen.List[l].Item.(type) {\n")
 
 	for _, m := range descr.Functions {
-		w.WriteString(fmt.Sprintf("\t\tcase *NgoloFuzzOne_%s%s:\n", m.Recv, m.Name))
+		w.WriteString(fmt.Sprintf("\t\tcase *NgoloFuzzOne_%s%s%s:\n", m.Recv, m.Name, m.Suffix))
 		//prepare args
 		for a := range m.Args {
 			switch m.Args[a].Proto {
@@ -450,7 +451,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 				w.WriteString(fmt.Sprintf("\t\t\t%sResultsIndex = (%sResultsIndex + 1) %% len(%sResults)\n", m.Args[a].FieldType, m.Args[a].FieldType, m.Args[a].FieldType))
 			case PkgFuncArgClassProtoGen:
 				w.WriteString(fmt.Sprintf("\t\t\targ%d := ", a))
-				w.WriteString(fmt.Sprintf("%s(a.%s%s.%s)\n", ProtoGenerators[m.Args[a].FieldType], m.Recv, m.Name, strings.Title(m.Args[a].Name)))
+				w.WriteString(fmt.Sprintf("%s(a.%s%s%s.%s)\n", ProtoGenerators[m.Args[a].FieldType], m.Recv, m.Name, m.Suffix, strings.Title(m.Args[a].Name)))
 			case PkgFuncArgClassPkgConst:
 				w.WriteString(fmt.Sprintf("\t\t\targ%d := ", a))
 				w.WriteString(fmt.Sprintf("%s(a.%s%s.%s)\n", m.Args[a].FieldType+"NewFromFuzz", m.Recv, m.Name, strings.Title(m.Args[a].Name)))
@@ -499,7 +500,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 			}
 			switch m.Args[a].Proto {
 			case PkgFuncArgClassProto:
-				w.WriteString(fmt.Sprintf("a.%s%s.%s", m.Recv, m.Name, strings.Title(m.Args[a].Name)))
+				w.WriteString(fmt.Sprintf("a.%s%s%s.%s", m.Recv, m.Name, m.Suffix, strings.Title(m.Args[a].Name)))
 			case PkgFuncArgClassPkgGen, PkgFuncArgClassProtoGen, PkgFuncArgClassPkgConst:
 				w.WriteString(fmt.Sprintf("arg%d", a))
 			}
@@ -537,7 +538,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 	w.WriteString("\tfor l := range gen.List {\n")
 	w.WriteString("\t\tswitch a := gen.List[l].Item.(type) {\n")
 	for _, m := range descr.Functions {
-		w.WriteString(fmt.Sprintf("\t\tcase *NgoloFuzzOne_%s%s:\n", m.Recv, m.Name))
+		w.WriteString(fmt.Sprintf("\t\tcase *NgoloFuzzOne_%s%s%s:\n", m.Recv, m.Name, m.Suffix))
 		//prepare args
 		for a := range m.Args {
 			switch m.Args[a].Proto {
@@ -599,10 +600,10 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 			switch m.Args[a].Proto {
 			case PkgFuncArgClassProto:
 				w.WriteString(fmt.Sprintf("%%#+v"))
-				formatArgs = append(formatArgs, fmt.Sprintf("a.%s%s.%s", m.Recv, m.Name, strings.Title(m.Args[a].Name)))
+				formatArgs = append(formatArgs, fmt.Sprintf("a.%s%s%s.%s", m.Recv, m.Name, m.Suffix, strings.Title(m.Args[a].Name)))
 			case PkgFuncArgClassProtoGen:
 				w.WriteString(fmt.Sprintf("%s(%%#+v)", ProtoGenerators[m.Args[a].FieldType]))
-				formatArgs = append(formatArgs, fmt.Sprintf("a.%s%s.%s", m.Recv, m.Name, strings.Title(m.Args[a].Name)))
+				formatArgs = append(formatArgs, fmt.Sprintf("a.%s%s%s.%s", m.Recv, m.Name, m.Suffix, strings.Title(m.Args[a].Name)))
 			case PkgFuncArgClassPkgConst:
 				w.WriteString(fmt.Sprintf("%s(%%#+v)", m.Args[a].FieldType+"NewFromFuzz"))
 				formatArgs = append(formatArgs, fmt.Sprintf("a.%s%s.%s", m.Recv, m.Name, strings.Title(m.Args[a].Name)))
@@ -885,6 +886,10 @@ func PackageToProtobufMessagesDescription(pkg *packages.Package, exclude string)
 				if funcToUse(f.Name.Name, excludes) {
 					pfpm := PkgFunction{}
 					pfpm.Name = f.Name.Name
+					switch pfpm.Name {
+					case "Marshal", "Unmarshal":
+						pfpm.Suffix = "_"
+					}
 					if f.Recv != nil {
 						if len(f.Recv.List) != 1 {
 							return r, fmt.Errorf("Function %s has unhandled recv %#+v", f.Name.Name, f.Recv.List)
