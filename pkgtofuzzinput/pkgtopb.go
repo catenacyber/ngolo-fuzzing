@@ -108,6 +108,9 @@ func GolangArgumentClassName(e ast.Expr) (PkgFuncArgClass, string) {
 	case *ast.Ellipsis:
 		return PkgFuncArgClassUnhandled, ""
 	case *ast.InterfaceType:
+		if len(i.Methods.List) == 0 {
+			return PkgFuncArgClassProto, "string"
+		}
 		return PkgFuncArgClassUnhandled, ""
 	case *ast.ChanType:
 		return PkgFuncArgClassUnhandled, ""
