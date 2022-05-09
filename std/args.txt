@@ -8,7 +8,7 @@ path_filepath -exclude Glob
 math_bits -exclude Div
 encoding_binary -exclude PutUvarint,PutVarint
 bufio -exclude ScanBytes -limits NewReaderSize.size
-container_ring -limits RingNgdotMove.n,New.n
+container_ring -limits RingNgdotMove.n,New.n,RingNgdotUnlink.n
 crypto_rand -limits Prime.bits
 strconv -limits FormatFloat.prec
 strings -limits Repeat.count
