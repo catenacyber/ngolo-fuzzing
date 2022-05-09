@@ -66,7 +66,7 @@ var ProtoGenerators = map[string]string{
 	"io.ReaderAt":   "bytes.NewReader",
 	"io.Reader":     "bytes.NewReader",
 	"io.Writer":     "bytes.NewBuffer",
-	"bufio.Reader":  "bytes.NewBuffer",
+	"bufio.Reader":  "CreateBufioReader",
 	"big.Int":       "CreateBigInt",
 	"net.Conn":      "CreateFuzzingConn",
 	"int":           "int",
@@ -146,7 +146,7 @@ func GolangArgumentClassName(e ast.Expr) (PkgFuncArgClass, string) {
 			case *ast.Ident:
 				se := fmt.Sprintf("%s.%s", i3.Name, i2.Sel.Name)
 				switch se {
-				case "big.Int":
+				case "big.Int", "bufio.Reader":
 					return PkgFuncArgClassProtoGen, se
 				}
 			}
@@ -288,6 +288,10 @@ func CreateBigInt(a []byte) *big.Int {
 	return r
 }
 
+func CreateBufioReader(a []byte) *bufio.Reader {
+	return bufio.NewReader(bytes.NewBuffer(a))
+}
+
 func ConvertIntArray(a []int64) []int {
 	r := make([]int, len(a))
 	for i := range a {
@@ -380,6 +384,8 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 	toimport := make(map[string]bool)
 	toimport[pkg.ID] = true
 	toimport["fmt"] = true
+	toimport["bufio"] = true
+	toimport["bytes"] = true
 	toimport["io"] = true
 	toimport["log"] = true
 	toimport["net"] = true
