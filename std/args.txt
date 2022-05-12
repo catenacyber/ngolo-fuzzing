@@ -12,6 +12,6 @@ container_ring -limits RingNgdotMove.n,New.n,RingNgdotUnlink.n
 crypto_rand -limits Prime.bits
 strconv -limits FormatFloat.prec
 strings -limits Repeat.count
-bytes -limits Repeat.count
+bytes -limits Repeat.count,BufferNgdotGrow.n
 io -exclude Pipe
 image -limits Rect.x1,Rect.y1
