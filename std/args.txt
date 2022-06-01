@@ -1,6 +1,6 @@
 regexp -exclude Must,Expand
 net_http -exclude ListenAndServe
-runtime -exclude Goexit,ReadTrace,GOMAXPROCS
+runtime -exclude Goexit,ReadTrace,GOMAXPROCS,StopTrace
 runtime_debug -exclude SetMaxThreads,SetMaxStack
 html_template -exclude ParseGlob
 text_template -exclude ParseGlob
