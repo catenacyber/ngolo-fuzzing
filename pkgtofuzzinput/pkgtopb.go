@@ -1008,7 +1008,9 @@ func PackageToProtobufMessagesDescription(pkg *packages.Package, exclude string)
 							if ok && v == (FNG_TYPE_RESULT|FNG_TYPE_ARG) || pfr.FieldType == "error" {
 								pfr.Used = true
 							}
-							pfpm.Returns = append(pfpm.Returns, pfr)
+							for _ = range f.Type.Results.List[l].Names {
+								pfpm.Returns = append(pfpm.Returns, pfr)
+							}
 						}
 					}
 					r.Functions = append(r.Functions, pfpm)
