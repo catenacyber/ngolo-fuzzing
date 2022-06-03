@@ -524,7 +524,11 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 					if m.Returns[a].Prefix == "" && m.Returns[a].Suffix == "" {
 						w.WriteString(fmt.Sprintf("\t\t\tif r%d != nil{\n\t", a))
 					}
-					w.WriteString(fmt.Sprintf("\t\t\t%sResults = append(%sResults, %sr%d%s)\n", m.Returns[a].FieldType, m.Returns[a].FieldType, m.Returns[a].Prefix, a, m.Returns[a].Suffix))
+					if m.Returns[a].FieldType == "error" {
+						w.WriteString("\t\t\treturn 0\n")
+					} else {
+						w.WriteString(fmt.Sprintf("\t\t\t%sResults = append(%sResults, %sr%d%s)\n", m.Returns[a].FieldType, m.Returns[a].FieldType, m.Returns[a].Prefix, a, m.Returns[a].Suffix))
+					}
 					if m.Returns[a].Prefix == "" && m.Returns[a].Suffix == "" {
 						w.WriteString(fmt.Sprintf("\t\t\t}\n"))
 					}
@@ -556,7 +560,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 		//call
 		useReturn := false
 		for a := range m.Returns {
-			if m.Returns[a].Used {
+			if m.Returns[a].Used && m.Returns[a].FieldType != "error" {
 				useReturn = true
 				break
 			}
@@ -571,7 +575,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 				} else {
 					comma = true
 				}
-				if m.Returns[a].Used {
+				if m.Returns[a].Used && m.Returns[a].FieldType != "error" {
 					w.WriteString(fmt.Sprintf("%s%%d", m.Returns[a].FieldType))
 					formatArgs = append(formatArgs, fmt.Sprintf("%sNb", m.Returns[a].FieldType))
 				} else {
@@ -632,7 +636,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 		//save
 		if useReturn {
 			for a := range m.Returns {
-				if m.Returns[a].Used {
+				if m.Returns[a].Used && m.Returns[a].FieldType != "error" {
 					w.WriteString(fmt.Sprintf("\t\t\t%sNb = %sNb + 1\n", m.Returns[a].FieldType, m.Returns[a].FieldType))
 				}
 			}
@@ -976,12 +980,14 @@ func PackageToProtobufMessagesDescription(pkg *packages.Package, exclude string)
 							pfr := PkgFuncResult{}
 							switch f.Type.Results.List[l].Type.(type) {
 							case *ast.Ident:
-								pfr.Prefix = "&"
+								if name != "error" {
+									pfr.Prefix = "&"
+								}
 							case *ast.ArrayType:
 								pfr.Suffix = "..."
 							}
 							pfr.FieldType = name
-							if ok && v == (FNG_TYPE_RESULT|FNG_TYPE_ARG) {
+							if ok && v == (FNG_TYPE_RESULT|FNG_TYPE_ARG) || pfr.FieldType == "error" {
 								pfr.Used = true
 							}
 							pfpm.Returns = append(pfpm.Returns, pfr)
