@@ -48,6 +48,7 @@ type PkgFunction struct {
 	Suffix  string
 	Args    []PkgFuncArg
 	Returns []PkgFuncResult
+	SrcDst  uint8
 }
 
 type PkgType struct {
@@ -461,6 +462,11 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 			case PkgFuncArgClassPkgConst:
 				w.WriteString(fmt.Sprintf("\t\t\targ%d := ", a))
 				w.WriteString(fmt.Sprintf("%s(a.%s%s.%s)\n", m.Args[a].FieldType+"NewFromFuzz", m.Recv, m.Name, strings.Title(m.Args[a].Name)))
+			case PkgFuncArgClassProto:
+				// The parameter 2 could be improved
+				if m.Args[a].Name == "dst" && m.Args[a].FieldType == "bytes" && m.SrcDst == FNG_DSTSRC_DST|FNG_DSTSRC_SRC {
+					w.WriteString(fmt.Sprintf("\t\t\ta.%s%s%s.Dst = make([]byte, 2*len(a.%s%s%s.Src))\n", m.Recv, m.Name, m.Suffix, m.Recv, m.Name, m.Suffix))
+				}
 			}
 		}
 		//call
@@ -720,6 +726,9 @@ const FNG_TYPE_RESULT = 1
 const FNG_TYPE_ARG = 2
 const FNG_TYPE_CONST = 4
 
+const FNG_DSTSRC_DST = 1
+const FNG_DSTSRC_SRC = 2
+
 func astGetName(a ast.Expr) (string, bool) {
 	switch e := a.(type) {
 	case *ast.StarExpr:
@@ -963,6 +972,15 @@ func PackageToProtobufMessagesDescription(pkg *packages.Package, exclude string)
 								papi.FieldType = name
 								papi.Proto = class
 								papi.Prefix = prefix
+								if papi.FieldType == "bytes" {
+									// special handling for functions such as hex.Encode(dst, src []byte)
+									// where dst is write only (no read) and size is assumed to be big enough
+									if papi.Name == "dst" {
+										pfpm.SrcDst = pfpm.SrcDst | FNG_DSTSRC_DST
+									} else if papi.Name == "src" {
+										pfpm.SrcDst = pfpm.SrcDst | FNG_DSTSRC_SRC
+									}
+								}
 								pfpm.Args = append(pfpm.Args, papi)
 							}
 						}
