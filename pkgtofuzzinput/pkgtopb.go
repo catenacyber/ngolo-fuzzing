@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"unicode"
@@ -283,6 +284,7 @@ func CreateFuzzingConn(a []byte) *FuzzingConn {
 	return r
 }
 
+//TODO only add these functions if needed
 func CreateBigInt(a []byte) *big.Int {
 	r := new(big.Int)
 	r.SetBytes(a)
@@ -367,6 +369,18 @@ func FuzzNG_List(gen *NgoloFuzzList) int {
 	}
 `
 
+// fix camel case for rare functions not having it like rsa.DecryptPKCS1v15
+
+func CamelUpper(s string) string {
+	return s[0:1] + strings.ToUpper(s[1:2]) + s[2:3]
+}
+
+var badCamel = regexp.MustCompile(`([0-9])([a-z])([0-9])`)
+
+func CamelCase(s string) string {
+	return badCamel.ReplaceAllStringFunc(s, CamelUpper)
+}
+
 func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.StringWriter, outdir string, limits string) error {
 
 	// maybe args parsing should be done earlier...
@@ -447,7 +461,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 	w.WriteString("\t\tswitch a := gen.List[l].Item.(type) {\n")
 
 	for _, m := range descr.Functions {
-		w.WriteString(fmt.Sprintf("\t\tcase *NgoloFuzzOne_%s%s%s:\n", m.Recv, m.Name, m.Suffix))
+		w.WriteString(fmt.Sprintf("\t\tcase *NgoloFuzzOne_%s%s%s:\n", m.Recv, CamelCase(m.Name), m.Suffix))
 		//prepare args
 		for a := range m.Args {
 			switch m.Args[a].Proto {
@@ -554,7 +568,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 	w.WriteString("\tfor l := range gen.List {\n")
 	w.WriteString("\t\tswitch a := gen.List[l].Item.(type) {\n")
 	for _, m := range descr.Functions {
-		w.WriteString(fmt.Sprintf("\t\tcase *NgoloFuzzOne_%s%s%s:\n", m.Recv, m.Name, m.Suffix))
+		w.WriteString(fmt.Sprintf("\t\tcase *NgoloFuzzOne_%s%s%s:\n", m.Recv, CamelCase(m.Name), m.Suffix))
 		//prepare args
 		for a := range m.Args {
 			switch m.Args[a].Proto {
