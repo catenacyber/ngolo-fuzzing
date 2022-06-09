@@ -862,6 +862,16 @@ func PackageToProtobufMessagesDescription(pkg *packages.Package, exclude string)
 			switch f := pkg.Syntax[s].Decls[d].(type) {
 			case *ast.FuncDecl:
 				if funcToUse(f.Name.Name, excludes) {
+					if f.Recv != nil {
+						if len(f.Recv.List) == 1 {
+							name, ok := astGetName(f.Recv.List[0].Type)
+							if ok && len(name) > 0 {
+								if !unicode.IsUpper(rune(name[0])) {
+									continue
+								}
+							}
+						}
+					}
 					if f.Type.Results != nil {
 						for l := range f.Type.Results.List {
 							name, ok := astGetName(f.Type.Results.List[l].Type)
