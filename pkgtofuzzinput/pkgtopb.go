@@ -112,8 +112,8 @@ func GolangArgumentClassName(e ast.Expr) (PkgFuncArgClass, string) {
 	case *ast.Ellipsis:
 		return PkgFuncArgClassUnhandled, ""
 	case *ast.InterfaceType:
-		if len(i.Methods.List) == 0 {
-			return PkgFuncArgClassProto, "string"
+		if len(i.Methods.List) == 0 { // any
+			return PkgFuncArgClassProto, "NgoloFuzzAny"
 		}
 		return PkgFuncArgClassUnhandled, ""
 	case *ast.ChanType:
@@ -201,6 +201,16 @@ func PackageToProtobuf(pkg *packages.Package, descr PkgDescription, w io.StringW
 	for m := range descr.Functions {
 		w.WriteString(fmt.Sprintf("    %s%sArgs %s%s = %d;\n", descr.Functions[m].Recv, descr.Functions[m].Name, descr.Functions[m].Recv, descr.Functions[m].Name, m+1))
 	}
+	w.WriteString("  }\n}\n")
+
+	//TODO only add it if necessary
+	w.WriteString(`message NgoloFuzzAny {` + "\n")
+	w.WriteString(`  oneof item {` + "\n")
+	w.WriteString("    double DoubleArgs = 1;\n")
+	w.WriteString("    int64 Int64Args = 2;\n")
+	w.WriteString("    bool BoolArgs = 3;\n")
+	w.WriteString("    string StringArgs = 4;\n")
+	w.WriteString("    bytes BytesArgs = 5;\n")
 	w.WriteString("  }\n}\n")
 
 	w.WriteString(`message NgoloFuzzList { repeated NgoloFuzzOne list = 1; }`)
