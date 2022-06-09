@@ -106,6 +106,8 @@ func GolangArgumentClassName(e ast.Expr) (PkgFuncArgClass, string) {
 			return PkgFuncArgClassProto, "double"
 		case "int", "rune", "byte", "uint8":
 			return PkgFuncArgClassProtoGen, i.Name
+		case "any":
+			return PkgFuncArgClassProto, "NgoloFuzzAny"
 		}
 	case *ast.FuncType:
 		return PkgFuncArgClassUnhandled, ""
