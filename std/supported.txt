@@ -7,7 +7,9 @@ compress/flate
 compress/gzip
 compress/lzw
 compress/zlib
+container/list
 container/ring
+context
 crypto/aes
 crypto/des
 crypto/ecdsa
@@ -24,6 +26,7 @@ crypto/sha512
 crypto/subtle
 crypto/x509
 database/sql
+database/sql/driver
 debug/buildinfo
 debug/dwarf
 debug/elf
@@ -32,10 +35,12 @@ debug/macho
 debug/pe
 debug/plan9obj
 encoding/ascii85
+encoding/asn1
 encoding/base32
 encoding/base64
 encoding/binary
 encoding/csv
+encoding/gob
 encoding/hex
 encoding/json
 encoding/pem
@@ -88,6 +93,7 @@ plugin
 regexp
 regexp/syntax
 runtime
+runtime/cgo
 runtime/debug
 runtime/trace
 strconv
