@@ -17,6 +17,7 @@ crypto/hmac
 crypto/md5
 crypto/rand
 crypto/rc4
+crypto/rsa
 crypto/sha1
 crypto/sha256
 crypto/sha512
@@ -68,6 +69,7 @@ math/bits
 mime
 mime/multipart
 mime/quotedprintable
+net
 net/http
 net/http/cgi
 net/http/httptest
