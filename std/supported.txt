@@ -74,7 +74,6 @@ math/bits
 mime
 mime/multipart
 mime/quotedprintable
-net
 net/http
 net/http/cgi
 net/http/httptest
