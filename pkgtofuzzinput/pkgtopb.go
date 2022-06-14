@@ -143,7 +143,9 @@ func GolangArgumentClassName(e ast.Expr) (PkgFuncArgClass, string) {
 			case *ast.Ident:
 				switch i3.Name {
 				case "byte":
-					return PkgFuncArgClassProto, "repeated bytes"
+					if i.Len == nil && i2.Len == nil {
+						return PkgFuncArgClassProto, "repeated bytes"
+					}
 				}
 			}
 		case *ast.Ident:
