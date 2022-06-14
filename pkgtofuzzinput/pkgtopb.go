@@ -178,13 +178,23 @@ func PackageToProtobuf(pkg *packages.Package, descr PkgDescription, w io.StringW
 	w.WriteString(`package ngolofuzz;` + "\n")
 	w.WriteString(`option go_package = "./;` + outdir + `";` + "\n\n")
 
+	for _, r := range descr.Types {
+		if len(r.Values) > 0 {
+			w.WriteString(`enum ` + r.Name + `Enum {` + "\n")
+			for v := range r.Values {
+				w.WriteString(fmt.Sprintf("  %s = %d;\n", r.Values[v], v))
+			}
+			w.WriteString("}\n\n")
+		}
+	}
+
 	for _, m := range descr.Functions {
 		w.WriteString(`message ` + m.Recv + m.Name + `Args {` + "\n")
 		idx := 1
 		for a := range m.Args {
 			switch m.Args[a].Proto {
 			case PkgFuncArgClassPkgConst:
-				w.WriteString(fmt.Sprintf("  uint32 %s = %d;\n", m.Args[a].Name, idx))
+				w.WriteString(fmt.Sprintf("  %sEnum %s = %d;\n", m.Args[a].FieldType, m.Args[a].Name, idx))
 				idx = idx + 1
 			case PkgFuncArgClassProto:
 				w.WriteString(fmt.Sprintf("  %s %s = %d;\n", m.Args[a].FieldType, m.Args[a].Name, idx))
@@ -447,7 +457,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 
 	for _, r := range descr.Types {
 		if len(r.Values) > 0 {
-			w.WriteString("\nfunc " + r.Name + "NewFromFuzz(p uint32) " + pkgImportName + "." + r.Name + "{\n")
+			w.WriteString("\nfunc " + r.Name + "NewFromFuzz(p " + r.Name + "Enum) " + pkgImportName + "." + r.Name + "{\n")
 			if len(r.Values) > 1 {
 				w.WriteString("\tswitch p {\n")
 				for i := 0; i < len(r.Values)-1; i++ {
@@ -957,7 +967,7 @@ func PackageToProtobufMessagesDescription(pkg *packages.Package, exclude string)
 							class := PkgFuncArgClassPkgGen
 							v, ok := typesMap[name]
 							if ok && v == (FNG_TYPE_CONST|FNG_TYPE_ARG) {
-								// we will produce one of the constants exported based on an uint32/enum-like
+								// we will produce one of the constants exported based on an int32/enum-like
 								class = PkgFuncArgClassPkgConst
 							} else if !ok || v != (FNG_TYPE_RESULT|FNG_TYPE_ARG) {
 								log.Printf("Function %s has unproduced recv %s", f.Name.Name, name)
@@ -991,7 +1001,7 @@ func PackageToProtobufMessagesDescription(pkg *packages.Package, exclude string)
 							if class == PkgFuncArgClassPkgGen {
 								v, ok := typesMap[name]
 								if ok && v == (FNG_TYPE_CONST|FNG_TYPE_ARG) {
-									// we will produce one of the constants exported based on an uint32/enum-like
+									// we will produce one of the constants exported based on an int32/enum-like
 									class = PkgFuncArgClassPkgConst
 								} else if !ok || v != (FNG_TYPE_RESULT|FNG_TYPE_ARG) {
 									log.Printf("Function %s has unproduced argument %s", f.Name.Name, name)
