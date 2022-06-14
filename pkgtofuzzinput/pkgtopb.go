@@ -26,6 +26,8 @@ const (
 	PkgFuncArgClassProtoGen  PkgFuncArgClass = 3
 	PkgFuncArgClassPkgConst  PkgFuncArgClass = 4
 	PkgFuncArgClassUnknown   PkgFuncArgClass = 5
+	PkgFuncArgClassPkgGenA   PkgFuncArgClass = 6
+	PkgFuncArgClassPkgStruct PkgFuncArgClass = 7
 )
 
 type PkgFuncArg struct {
@@ -33,6 +35,7 @@ type PkgFuncArg struct {
 	FieldType string
 	Proto     PkgFuncArgClass
 	Prefix    string
+	Suffix    string
 }
 
 type PkgFuncResult struct {
@@ -55,7 +58,7 @@ type PkgFunction struct {
 type PkgType struct {
 	Name   string
 	Values []string
-	//maybe more fields will come if we need to build this type out of its exported fields...
+	Args   []PkgFuncArg
 }
 
 type PkgDescription struct {
@@ -75,7 +78,9 @@ var ProtoGenerators = map[string]string{
 	"rune":          "GetRune",
 	"byte":          "byte",
 	"uint8":         "uint8",
+	"uint16":        "uint16",
 	"[]int":         "ConvertIntArray",
+	"[]uint16":      "ConvertUint16Array",
 }
 
 var ProtoGenerated = map[string]string{
@@ -90,11 +95,13 @@ var ProtoGenerated = map[string]string{
 	"rune":          "string",
 	"byte":          "uint32",
 	"uint8":         "uint32",
+	"uint16":        "uint32",
 	"[]int":         "repeated int64",
+	"[]uint16":      "repeated int64",
 }
 
 func GolangArgumentClassName(e ast.Expr) (PkgFuncArgClass, string) {
-	//TODO complete
+	// this is likely incomplete
 	switch i := e.(type) {
 	case *ast.Ident:
 		switch i.Name {
@@ -104,7 +111,7 @@ func GolangArgumentClassName(e ast.Expr) (PkgFuncArgClass, string) {
 			return PkgFuncArgClassProto, "float"
 		case "float64":
 			return PkgFuncArgClassProto, "double"
-		case "int", "rune", "byte", "uint8":
+		case "int", "rune", "byte", "uint8", "uint16":
 			return PkgFuncArgClassProtoGen, i.Name
 		case "any":
 			return PkgFuncArgClassProto, "NgoloFuzzAny"
@@ -131,16 +138,31 @@ func GolangArgumentClassName(e ast.Expr) (PkgFuncArgClass, string) {
 		return PkgFuncArgClassUnhandled, ""
 	case *ast.ArrayType:
 		switch i2 := i.Elt.(type) {
+		case *ast.ArrayType:
+			switch i3 := i2.Elt.(type) {
+			case *ast.Ident:
+				switch i3.Name {
+				case "byte":
+					return PkgFuncArgClassProto, "repeated bytes"
+				}
+			}
 		case *ast.Ident:
 			switch i2.Name {
-			case "byte":
-				return PkgFuncArgClassProto, "bytes"
+			case "byte", "uint8":
+				if i.Len == nil {
+					// no fixed size arrays in protobuf...
+					return PkgFuncArgClassProto, "bytes"
+				}
+			case "uint16":
+				return PkgFuncArgClassProtoGen, "[]uint16"
 			case "int":
 				return PkgFuncArgClassProtoGen, "[]int"
 			case "float64":
 				return PkgFuncArgClassProto, "repeated float64"
 			case "string":
 				return PkgFuncArgClassProto, "repeated string"
+			default:
+				return PkgFuncArgClassPkgGenA, i2.Name
 			}
 		}
 	case *ast.StarExpr:
@@ -185,6 +207,23 @@ func PackageToProtobuf(pkg *packages.Package, descr PkgDescription, w io.StringW
 				w.WriteString(fmt.Sprintf("  %s = %d;\n", r.Values[v], v))
 			}
 			w.WriteString("}\n\n")
+		} else if len(r.Args) > 0 {
+			idx := 1
+			w.WriteString(`message ` + r.Name + `Struct {` + "\n")
+			for a := range r.Args {
+				switch r.Args[a].Proto {
+				case PkgFuncArgClassPkgConst:
+					w.WriteString(fmt.Sprintf("  %sEnum %s = %d;\n", r.Args[a].FieldType, r.Args[a].Name, idx))
+					idx = idx + 1
+				case PkgFuncArgClassProto:
+					w.WriteString(fmt.Sprintf("  %s %s = %d;\n", r.Args[a].FieldType, r.Args[a].Name, idx))
+					idx = idx + 1
+				case PkgFuncArgClassProtoGen:
+					w.WriteString(fmt.Sprintf("  %s %s = %d;\n", ProtoGenerated[r.Args[a].FieldType], r.Args[a].Name, idx))
+					idx = idx + 1
+				}
+			}
+			w.WriteString("}\n\n")
 		}
 	}
 
@@ -201,6 +240,9 @@ func PackageToProtobuf(pkg *packages.Package, descr PkgDescription, w io.StringW
 				idx = idx + 1
 			case PkgFuncArgClassProtoGen:
 				w.WriteString(fmt.Sprintf("  %s %s = %d;\n", ProtoGenerated[m.Args[a].FieldType], m.Args[a].Name, idx))
+				idx = idx + 1
+			case PkgFuncArgClassPkgStruct:
+				w.WriteString(fmt.Sprintf("  %sStruct %s = %d;\n", m.Args[a].FieldType, m.Args[a].Name, idx))
 				idx = idx + 1
 			}
 		}
@@ -321,6 +363,14 @@ func ConvertIntArray(a []int64) []int {
 	r := make([]int, len(a))
 	for i := range a {
 		r[i] = int(a[i])
+	}
+	return r
+}
+
+func ConvertUint16Array(a []int64) []uint16 {
+	r := make([]uint16, len(a))
+	for i := range a {
+		r[i] = uint16(a[i])
 	}
 	return r
 }
@@ -455,6 +505,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 	pkgSplit := strings.Split(pkg.ID, "/")
 	pkgImportName := pkgSplit[len(pkgSplit)-1]
 
+	// write functions returning type with constants
 	for _, r := range descr.Types {
 		if len(r.Values) > 0 {
 			w.WriteString("\nfunc " + r.Name + "NewFromFuzz(p " + r.Name + "Enum) " + pkgImportName + "." + r.Name + "{\n")
@@ -468,13 +519,40 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 			}
 			w.WriteString("\treturn " + pkgImportName + "." + r.Values[0] + "\n")
 			w.WriteString("}\n\n")
+			w.WriteString("\nfunc Convert" + r.Name + "NewFromFuzz(a []" + r.Name + "Enum) []" + pkgImportName + "." + r.Name + "{\n")
+			w.WriteString("\tr := make([]" + pkgImportName + "." + r.Name + ", len(a))\n")
+			w.WriteString("\tfor i := range a {\n")
+			w.WriteString("\t\tr[i] = " + r.Name + "NewFromFuzz(a[i])\n")
+			w.WriteString("\t}\n")
+			w.WriteString("\treturn r\n")
+			w.WriteString("}\n\n")
+		} else if len(r.Args) > 0 {
+			w.WriteString("\nfunc " + r.Name + "NewFromFuzz(p *" + r.Name + "Struct) *" + pkgImportName + "." + r.Name + "{\n")
+			w.WriteString("\treturn &" + pkgImportName + "." + r.Name + "{\n")
+			for i := range r.Args {
+				w.WriteString("\t\t" + r.Args[i].Name + ": ")
+				switch r.Args[i].Proto {
+				case PkgFuncArgClassPkgConst:
+					if strings.HasPrefix(r.Args[i].FieldType, "repeated ") {
+						w.WriteString(fmt.Sprintf("Convert%s(p.%s)", r.Args[i].FieldType[len("repeated "):]+"NewFromFuzz", r.Args[i].Name))
+					} else {
+						w.WriteString(fmt.Sprintf("%s(p.%s)", r.Args[i].FieldType+"NewFromFuzz", r.Args[i].Name))
+					}
+				case PkgFuncArgClassProto:
+					w.WriteString(fmt.Sprintf("p.%s%s", r.Args[i].Name, r.Args[i].Suffix))
+				case PkgFuncArgClassProtoGen:
+					w.WriteString(fmt.Sprintf("%s(p.%s)", ProtoGenerators[r.Args[i].FieldType], r.Args[i].Name))
+				}
+				w.WriteString(",\n")
+			}
+			w.WriteString("\t}\n")
+			w.WriteString("}\n\n")
 		}
 	}
-	//TODO write functions returning type with constants
 	w.WriteString(fuzzTarget3)
 
 	for _, r := range descr.Types {
-		if len(r.Values) == 0 {
+		if len(r.Values) == 0 && len(r.Args) == 0 {
 			w.WriteString(fmt.Sprintf("\tvar %sResults []*%s.%s\n", r.Name, pkgImportName, r.Name))
 			w.WriteString(fmt.Sprintf("\t%sResultsIndex := 0\n", r.Name))
 		}
@@ -495,7 +573,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 			case PkgFuncArgClassProtoGen:
 				w.WriteString(fmt.Sprintf("\t\t\targ%d := ", a))
 				w.WriteString(fmt.Sprintf("%s(a.%s%s%s.%s)\n", ProtoGenerators[m.Args[a].FieldType], m.Recv, CamelCase(m.Name), m.Suffix, strings.Title(m.Args[a].Name)))
-			case PkgFuncArgClassPkgConst:
+			case PkgFuncArgClassPkgConst, PkgFuncArgClassPkgStruct:
 				w.WriteString(fmt.Sprintf("\t\t\targ%d := ", a))
 				w.WriteString(fmt.Sprintf("%s(a.%s%s.%s)\n", m.Args[a].FieldType+"NewFromFuzz", m.Recv, m.Name, strings.Title(m.Args[a].Name)))
 			case PkgFuncArgClassProto:
@@ -549,7 +627,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 			switch m.Args[a].Proto {
 			case PkgFuncArgClassProto:
 				w.WriteString(fmt.Sprintf("a.%s%s%s.%s", m.Recv, CamelCase(m.Name), m.Suffix, strings.Title(m.Args[a].Name)))
-			case PkgFuncArgClassPkgGen, PkgFuncArgClassProtoGen, PkgFuncArgClassPkgConst:
+			case PkgFuncArgClassPkgGen, PkgFuncArgClassProtoGen, PkgFuncArgClassPkgConst, PkgFuncArgClassPkgStruct:
 				w.WriteString(fmt.Sprintf("arg%d", a))
 			}
 			// check if this parameter must be limited like rand.Prime.bits
@@ -582,7 +660,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 
 	w.WriteString("func PrintNG_List(gen *NgoloFuzzList, w io.StringWriter) {\n")
 	for _, r := range descr.Types {
-		if len(r.Values) == 0 {
+		if len(r.Values) == 0 && len(r.Args) == 0 {
 			w.WriteString(fmt.Sprintf("\t%sNb := 0\n", r.Name))
 			w.WriteString(fmt.Sprintf("\t%sResultsIndex := 0\n", r.Name))
 		}
@@ -627,7 +705,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 			w.WriteString(" := ")
 		}
 		if len(m.Recv) > 0 {
-			if m.Args[0].Proto == PkgFuncArgClassPkgConst {
+			if m.Args[0].Proto == PkgFuncArgClassPkgConst || m.Args[0].Proto == PkgFuncArgClassPkgStruct {
 				w.WriteString(fmt.Sprintf("%s(%%#+v).", m.Args[0].FieldType+"NewFromFuzz"))
 				formatArgs = append(formatArgs, fmt.Sprintf("a.%s%s.%s", m.Recv, m.Name, strings.Title(m.Args[0].Name)))
 			} else {
@@ -656,7 +734,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 			case PkgFuncArgClassProtoGen:
 				w.WriteString(fmt.Sprintf("%s(%%#+v)", ProtoGenerators[m.Args[a].FieldType]))
 				formatArgs = append(formatArgs, fmt.Sprintf("a.%s%s%s.%s", m.Recv, CamelCase(m.Name), m.Suffix, strings.Title(m.Args[a].Name)))
-			case PkgFuncArgClassPkgConst:
+			case PkgFuncArgClassPkgConst, PkgFuncArgClassPkgStruct:
 				w.WriteString(fmt.Sprintf("%s(%%#+v)", m.Args[a].FieldType+"NewFromFuzz"))
 				formatArgs = append(formatArgs, fmt.Sprintf("a.%s%s.%s", m.Recv, m.Name, strings.Title(m.Args[a].Name)))
 			case PkgFuncArgClassPkgGen:
@@ -758,9 +836,14 @@ func PackageFromName(pkgname string) (*packages.Package, error) {
 }
 
 // Flags
-const FNG_TYPE_RESULT = 1
-const FNG_TYPE_ARG = 2
-const FNG_TYPE_CONST = 4
+const FNG_TYPE_RESULT uint8 = 1
+const FNG_TYPE_ARG uint8 = 2
+
+// has some defined constants
+const FNG_TYPE_CONST uint8 = 4
+
+// struct with exported fields (which can be built without a function)
+const FNG_TYPE_STRUCTEXP uint8 = 8
 
 const FNG_DSTSRC_DST = 1
 const FNG_DSTSRC_SRC = 2
@@ -841,6 +924,59 @@ func pkgTypeConsts(pkg *packages.Package, k string) (bool, []string) {
 	return found, values
 }
 
+func exportedStructArgs(pkg *packages.Package, sname string, typesMap map[string]uint8) []PkgFuncArg {
+	var r []PkgFuncArg
+	for s := range pkg.Syntax {
+		for d := range pkg.Syntax[s].Decls {
+			switch f := pkg.Syntax[s].Decls[d].(type) {
+			case *ast.GenDecl:
+				for l := range f.Specs {
+					switch t := f.Specs[l].(type) {
+					case *ast.TypeSpec:
+						if t.Name.Name == sname {
+							switch u := t.Type.(type) {
+							case *ast.StructType:
+								for f := range u.Fields.List {
+									for n := range u.Fields.List[f].Names {
+										if unicode.IsUpper(rune(u.Fields.List[f].Names[n].Name[0])) {
+											class, name := GolangArgumentClassName(u.Fields.List[f].Type)
+											if class == PkgFuncArgClassUnknown || class == PkgFuncArgClassUnhandled {
+												log.Printf("Unhandled field %#+v for struct %s", u.Fields.List[f].Type, sname)
+												continue
+											}
+											sa := PkgFuncArg{}
+											sa.Name = u.Fields.List[f].Names[n].Name
+											sa.FieldType = name
+											if class == PkgFuncArgClassPkgGen || class == PkgFuncArgClassPkgGenA {
+												v, ok := typesMap[name]
+												if ok && (v&FNG_TYPE_CONST) != 0 {
+													// we will produce one of the constants exported based on an int32/enum-like
+													if class == PkgFuncArgClassPkgGenA {
+														sa.FieldType = "repeated " + sa.FieldType
+													}
+													class = PkgFuncArgClassPkgConst
+												}
+											}
+											sa.Proto = class
+											if sa.Name == "String" {
+												sa.Suffix = "_"
+											}
+											if class != PkgFuncArgClassPkgGen && class != PkgFuncArgClassPkgGenA {
+												r = append(r, sa)
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return r
+}
+
 func PackageToProtobufMessagesDescription(pkg *packages.Package, exclude string) (PkgDescription, error) {
 	r := PkgDescription{}
 
@@ -858,7 +994,25 @@ func PackageToProtobufMessagesDescription(pkg *packages.Package, exclude string)
 					switch t := f.Specs[l].(type) {
 					case *ast.TypeSpec:
 						if unicode.IsUpper(rune(t.Name.Name[0])) {
-							typesMap[t.Name.Name] = 0
+							initVal := uint8(0)
+							switch u := t.Type.(type) {
+							case *ast.StructType:
+								nbu := 0
+								nbl := 0
+								for f := range u.Fields.List {
+									for n := range u.Fields.List[f].Names {
+										if unicode.IsUpper(rune(u.Fields.List[f].Names[n].Name[0])) {
+											nbu++
+										} else {
+											nbl++
+										}
+									}
+								}
+								if nbu > nbl {
+									initVal = FNG_TYPE_STRUCTEXP
+								}
+							}
+							typesMap[t.Name.Name] = initVal
 						}
 					}
 				}
@@ -919,12 +1073,13 @@ func PackageToProtobufMessagesDescription(pkg *packages.Package, exclude string)
 	}
 
 	r.Types = make([]PkgType, 0, len(typesMap))
+	var structToDo []string
 	for k, v := range typesMap {
-		if v == (FNG_TYPE_RESULT | FNG_TYPE_ARG) {
+		if (v & (FNG_TYPE_RESULT | FNG_TYPE_ARG)) == (FNG_TYPE_RESULT | FNG_TYPE_ARG) {
 			pt := PkgType{}
 			pt.Name = k
 			r.Types = append(r.Types, pt)
-		} else if v == FNG_TYPE_ARG {
+		} else if (v & FNG_TYPE_ARG) != 0 {
 			hasconst, values := pkgTypeConsts(pkg, k)
 			if hasconst {
 				// There is no producer, but we have some exported const values that we can use
@@ -933,12 +1088,23 @@ func PackageToProtobufMessagesDescription(pkg *packages.Package, exclude string)
 				pt.Name = k
 				pt.Values = values
 				r.Types = append(r.Types, pt)
+			} else if (v & FNG_TYPE_STRUCTEXP) != 0 {
+				structToDo = append(structToDo, k)
 			} else {
-				//TODO implement a dummy function to build this based on the exported fields ?
-				// or field of an other produced field
+				//TODO type is exported field of an other produced return ?
 				log.Printf("Type %s is used as argument but not produced\n", k)
 				//return r, fmt.Errorf("Type %s is used as argument but not produced", k)
 			}
+		}
+	}
+	for _, k := range structToDo {
+		pt := PkgType{}
+		pt.Name = k
+		pt.Args = exportedStructArgs(pkg, k, typesMap)
+		if len(pt.Args) == 0 {
+			typesMap[k] = typesMap[k] & (uint8(^FNG_TYPE_STRUCTEXP))
+		} else {
+			r.Types = append(r.Types, pt)
 		}
 	}
 
@@ -969,7 +1135,9 @@ func PackageToProtobufMessagesDescription(pkg *packages.Package, exclude string)
 							if ok && v == (FNG_TYPE_CONST|FNG_TYPE_ARG) {
 								// we will produce one of the constants exported based on an int32/enum-like
 								class = PkgFuncArgClassPkgConst
-							} else if !ok || v != (FNG_TYPE_RESULT|FNG_TYPE_ARG) {
+							} else if (v&FNG_TYPE_STRUCTEXP) != 0 && (v&FNG_TYPE_RESULT) == 0 {
+								class = PkgFuncArgClassPkgStruct
+							} else if !ok || (v&FNG_TYPE_RESULT) == 0 {
 								log.Printf("Function %s has unproduced recv %s", f.Name.Name, name)
 								continue
 							}
@@ -1003,7 +1171,7 @@ func PackageToProtobufMessagesDescription(pkg *packages.Package, exclude string)
 								if ok && v == (FNG_TYPE_CONST|FNG_TYPE_ARG) {
 									// we will produce one of the constants exported based on an int32/enum-like
 									class = PkgFuncArgClassPkgConst
-								} else if !ok || v != (FNG_TYPE_RESULT|FNG_TYPE_ARG) {
+								} else if !ok || (v&FNG_TYPE_RESULT) == 0 {
 									log.Printf("Function %s has unproduced argument %s", f.Name.Name, name)
 									donotadd = true
 									continue
@@ -1011,6 +1179,10 @@ func PackageToProtobufMessagesDescription(pkg *packages.Package, exclude string)
 								if _, ok := f.Type.Params.List[l].Type.(*ast.Ident); ok {
 									prefix = "*"
 								}
+							} else if class == PkgFuncArgClassPkgGenA {
+								log.Printf("Function %s has unproduced array argument %s", f.Name.Name, name)
+								donotadd = true
+								continue
 							}
 							for n := range f.Type.Params.List[l].Names {
 								papi := PkgFuncArg{}
