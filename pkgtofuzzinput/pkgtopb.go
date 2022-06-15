@@ -1049,9 +1049,14 @@ func PackageToProtobufMessagesDescription(pkg *packages.Package, exclude string)
 						for l := range f.Type.Results.List {
 							name, ok := astGetName(f.Type.Results.List[l].Type)
 							if ok && len(name) > 0 {
-								v, ok := typesMap[name]
-								if ok {
-									typesMap[name] = v | FNG_TYPE_RESULT
+								_, isarray := f.Type.Results.List[l].Type.(*ast.ArrayType)
+								if !isarray {
+									v, ok := typesMap[name]
+									if ok {
+										typesMap[name] = v | FNG_TYPE_RESULT
+									}
+								} else {
+									log.Printf("Array result for %s is not handled\n", name)
 								}
 							}
 						}
