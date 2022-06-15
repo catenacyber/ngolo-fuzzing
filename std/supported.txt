@@ -109,5 +109,6 @@ text/scanner
 text/tabwriter
 text/template
 text/template/parse
+unicode
 unicode/utf16
 unicode/utf8
