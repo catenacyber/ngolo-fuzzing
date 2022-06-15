@@ -455,6 +455,13 @@ func CamelCase(s string) string {
 	return badCamel.ReplaceAllStringFunc(s, CamelUpper)
 }
 
+func TitleCase(s string) string {
+	if len(s) > 0 && s[0] == '_' {
+		return "X" + strings.Title(s[1:])
+	}
+	return strings.Title(s)
+}
+
 func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.StringWriter, outdir string, limits string) error {
 
 	// maybe args parsing should be done earlier...
@@ -574,7 +581,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 				w.WriteString(fmt.Sprintf("\t\t\t%sResultsIndex = (%sResultsIndex + 1) %% len(%sResults)\n", m.Args[a].FieldType, m.Args[a].FieldType, m.Args[a].FieldType))
 			case PkgFuncArgClassProtoGen:
 				w.WriteString(fmt.Sprintf("\t\t\targ%d := ", a))
-				w.WriteString(fmt.Sprintf("%s(a.%s%s%s.%s)\n", ProtoGenerators[m.Args[a].FieldType], m.Recv, CamelCase(m.Name), m.Suffix, strings.Title(m.Args[a].Name)))
+				w.WriteString(fmt.Sprintf("%s(a.%s%s%s.%s)\n", ProtoGenerators[m.Args[a].FieldType], m.Recv, CamelCase(m.Name), m.Suffix, TitleCase(m.Args[a].Name)))
 			case PkgFuncArgClassPkgConst, PkgFuncArgClassPkgStruct:
 				w.WriteString(fmt.Sprintf("\t\t\targ%d := ", a))
 				w.WriteString(fmt.Sprintf("%s(a.%s%s.%s)\n", m.Args[a].FieldType+"NewFromFuzz", m.Recv, m.Name, strings.Title(m.Args[a].Name)))
@@ -735,7 +742,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 				formatArgs = append(formatArgs, fmt.Sprintf("a.%s%s%s.%s", m.Recv, CamelCase(m.Name), m.Suffix, strings.Title(m.Args[a].Name)))
 			case PkgFuncArgClassProtoGen:
 				w.WriteString(fmt.Sprintf("%s(%%#+v)", ProtoGenerators[m.Args[a].FieldType]))
-				formatArgs = append(formatArgs, fmt.Sprintf("a.%s%s%s.%s", m.Recv, CamelCase(m.Name), m.Suffix, strings.Title(m.Args[a].Name)))
+				formatArgs = append(formatArgs, fmt.Sprintf("a.%s%s%s.%s", m.Recv, CamelCase(m.Name), m.Suffix, TitleCase(m.Args[a].Name)))
 			case PkgFuncArgClassPkgConst, PkgFuncArgClassPkgStruct:
 				w.WriteString(fmt.Sprintf("%s(%%#+v)", m.Args[a].FieldType+"NewFromFuzz"))
 				formatArgs = append(formatArgs, fmt.Sprintf("a.%s%s.%s", m.Recv, m.Name, strings.Title(m.Args[a].Name)))
