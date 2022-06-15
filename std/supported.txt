@@ -75,6 +75,7 @@ io/fs
 io/ioutil
 log
 log/syslog
+math/big
 math/bits
 mime
 mime/multipart
