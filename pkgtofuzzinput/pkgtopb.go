@@ -663,6 +663,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 						w.WriteString(fmt.Sprintf("\t\t\tif r%d != nil{\n\t", a))
 					}
 					if m.Returns[a].FieldType == "error" {
+						w.WriteString(fmt.Sprintf("\t\t\tr%d.Error()\n", a))
 						w.WriteString("\t\t\treturn 0\n")
 					} else {
 						w.WriteString(fmt.Sprintf("\t\t\t%sResults = append(%sResults, %sr%d%s)\n", m.Returns[a].FieldType, m.Returns[a].FieldType, m.Returns[a].Prefix, a, m.Returns[a].Suffix))
@@ -1050,6 +1051,13 @@ func PackageToProtobufMessagesDescription(pkg *packages.Package, exclude string)
 							if ok && len(name) > 0 {
 								if !unicode.IsUpper(rune(name[0])) {
 									continue
+								}
+								v, ok := typesMap[name]
+								if ok && (v&FNG_TYPE_STRUCTEXP) != 0 {
+									if f.Name.Name == "Error" {
+										//check could be more complete : no param, one return which is string
+										typesMap[name] = v & (uint8(^FNG_TYPE_STRUCTEXP))
+									}
 								}
 							}
 						}
