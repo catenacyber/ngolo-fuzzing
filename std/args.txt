@@ -1,4 +1,5 @@
 regexp -exclude Must,Expand
+net_netip -exclude Must
 net_http -exclude ListenAndServe
 runtime -exclude Goexit,ReadTrace,GOMAXPROCS,StopTrace,SetFinalizer
 runtime_debug -exclude SetMaxThreads,SetMaxStack
