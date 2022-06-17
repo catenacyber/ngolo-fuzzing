@@ -537,6 +537,9 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 			w.WriteString("}\n\n")
 		} else if len(r.Args) > 0 {
 			w.WriteString("\nfunc " + r.Name + "NewFromFuzz(p *" + r.Name + "Struct) *" + pkgImportName + "." + r.Name + "{\n")
+			w.WriteString("\tif p == nil {\n")
+			w.WriteString("\t\treturn nil\n")
+			w.WriteString("\t}\n")
 			w.WriteString("\treturn &" + pkgImportName + "." + r.Name + "{\n")
 			for i := range r.Args {
 				w.WriteString("\t\t" + r.Args[i].Name + ": ")
@@ -582,9 +585,15 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 			case PkgFuncArgClassProtoGen:
 				w.WriteString(fmt.Sprintf("\t\t\targ%d := ", a))
 				w.WriteString(fmt.Sprintf("%s(a.%s%s%s.%s)\n", ProtoGenerators[m.Args[a].FieldType], m.Recv, CamelCase(m.Name), m.Suffix, TitleCase(m.Args[a].Name)))
-			case PkgFuncArgClassPkgConst, PkgFuncArgClassPkgStruct:
+			case PkgFuncArgClassPkgConst:
 				w.WriteString(fmt.Sprintf("\t\t\targ%d := ", a))
 				w.WriteString(fmt.Sprintf("%s(a.%s%s.%s)\n", m.Args[a].FieldType+"NewFromFuzz", m.Recv, m.Name, strings.Title(m.Args[a].Name)))
+			case PkgFuncArgClassPkgStruct:
+				w.WriteString(fmt.Sprintf("\t\t\targ%d := ", a))
+				w.WriteString(fmt.Sprintf("%s(a.%s%s.%s)\n", m.Args[a].FieldType+"NewFromFuzz", m.Recv, m.Name, strings.Title(m.Args[a].Name)))
+				w.WriteString(fmt.Sprintf("\t\t\tif arg%d == nil {\n", a))
+				w.WriteString("\t\t\t\t continue\n")
+				w.WriteString("\t\t\t}\n")
 			case PkgFuncArgClassProto:
 				// The parameter 2 could be improved
 				if m.Args[a].Name == "dst" && m.Args[a].FieldType == "bytes" && m.SrcDst == FNG_DSTSRC_DST|FNG_DSTSRC_SRC {
