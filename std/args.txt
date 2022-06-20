@@ -17,3 +17,4 @@ strings -limits Repeat.count
 bytes -limits Repeat.count,BufferNgdotGrow.n
 io -exclude Pipe
 image -limits Rect.x1,Rect.y1 -exclude Div
+debug_dwarf -exclude ArrayType

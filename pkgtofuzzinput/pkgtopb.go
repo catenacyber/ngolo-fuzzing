@@ -1012,7 +1012,7 @@ func PackageToProtobufMessagesDescription(pkg *packages.Package, exclude string)
 				for l := range f.Specs {
 					switch t := f.Specs[l].(type) {
 					case *ast.TypeSpec:
-						if unicode.IsUpper(rune(t.Name.Name[0])) {
+						if funcToUse(t.Name.Name, excludes) {
 							initVal := uint8(0)
 							switch u := t.Type.(type) {
 							case *ast.StructType:
