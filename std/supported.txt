@@ -27,7 +27,6 @@ crypto/sha512
 crypto/subtle
 crypto/tls
 crypto/x509
-crypto/x509/pkix
 database/sql
 database/sql/driver
 debug/buildinfo
