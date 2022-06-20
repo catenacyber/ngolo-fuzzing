@@ -15,7 +15,10 @@ crypto_rsa -limits Prime.nprimes,GenerateMultiPrimeKey.nprimes
 strconv -limits FormatFloat.prec
 strings -limits Repeat.count
 bytes -limits Repeat.count,BufferNgdotGrow.n -exclude BufferNgdotNext
-io -exclude Pipe
+io -exclude Pipe,LimitedReader
 image -limits Rect.x1,Rect.y1 -exclude Div
 debug_dwarf -exclude ArrayType
 text_template_parse -exclude ActionNode
+go_ast -exclude InterfaceType
+crypto_cipher -exclude StreamReader
+encoding_asn1 -exclude BitString
