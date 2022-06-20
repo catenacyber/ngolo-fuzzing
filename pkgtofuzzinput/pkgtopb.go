@@ -982,6 +982,9 @@ func exportedStructArgs(pkg *packages.Package, sname string, typesMap map[string
 											}
 											if class != PkgFuncArgClassPkgGen && class != PkgFuncArgClassPkgGenA {
 												r = append(r, sa)
+											} else {
+												// do not try if there are fields we cannot build
+												return []PkgFuncArg{}
 											}
 										}
 									}
