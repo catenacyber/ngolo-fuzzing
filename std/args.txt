@@ -18,3 +18,4 @@ bytes -limits Repeat.count,BufferNgdotGrow.n -exclude BufferNgdotNext
 io -exclude Pipe
 image -limits Rect.x1,Rect.y1 -exclude Div
 debug_dwarf -exclude ArrayType
+text_template_parse -exclude ActionNode
