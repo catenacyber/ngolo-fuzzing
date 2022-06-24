@@ -11,7 +11,7 @@ encoding_binary -exclude PutUvarint,PutVarint
 bufio -exclude ScanBytes -limits NewReaderSize.size
 container_ring -limits RingNgdotMove.n,New.n,RingNgdotUnlink.n
 crypto_rand -limits Prime.bits
-crypto_rsa -limits Prime.nprimes,GenerateMultiPrimeKey.nprimes
+crypto_rsa -limits Prime.nprimes,GenerateMultiPrimeKey.nprimes,GenerateKey.bits
 strconv -limits FormatFloat.prec
 strings -limits Repeat.count
 bytes -limits Repeat.count,BufferNgdotGrow.n -exclude BufferNgdotNext
