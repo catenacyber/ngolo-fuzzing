@@ -14,7 +14,7 @@ crypto_rand -limits Prime.bits
 crypto_rsa -limits Prime.nprimes,GenerateMultiPrimeKey.nprimes,GenerateKey.bits
 strconv -limits FormatFloat.prec
 strings -limits Repeat.count
-bytes -limits Repeat.count,BufferNgdotGrow.n -exclude BufferNgdotNext
+bytes -limits Repeat.count,BufferNgdotGrow.n -exclude Next
 io -exclude Pipe,LimitedReader
 image -limits Rect.x1,Rect.y1 -exclude Div
 debug_dwarf -exclude ArrayType
