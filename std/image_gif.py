@@ -12,9 +12,12 @@ patch='''			arg1 := bytes.NewReader(a.Decode.R)
 			}'''
 
 f = open(sys.argv[1])
-patched = False
+patched = 0
 for l in f.readlines():
     print(l, end="")
-    if "case *NgoloFuzzOne_Decode:" in l and not patched:
+    if "case *NgoloFuzzOne_Decode:" in l and patched < 2:
         print(patch)
-        patched = True
+        patched = patched + 1
+    if "case *NgoloFuzzOne_DecodeAll:" in l and patched < 2:
+        print(patch)
+        patched = patched + 1
