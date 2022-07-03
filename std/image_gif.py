@@ -19,5 +19,5 @@ for l in f.readlines():
         print(patch)
         patched = patched + 1
     if "case *NgoloFuzzOne_DecodeAll:" in l and patched < 2:
-        print(patch)
+        print(patch.replace('Decode.R', 'DecodeAll.R'))
         patched = patched + 1
