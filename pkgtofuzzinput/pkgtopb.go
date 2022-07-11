@@ -570,6 +570,9 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 		}
 	}
 	w.WriteString("\tfor l := range gen.List {\n")
+	w.WriteString("\tif l > 4096 {\n")
+	w.WriteString("\t\treturn 0\n")
+	w.WriteString("\t}\n")
 	w.WriteString("\t\tswitch a := gen.List[l].Item.(type) {\n")
 
 	for _, m := range descr.Functions {
