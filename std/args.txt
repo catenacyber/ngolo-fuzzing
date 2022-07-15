@@ -11,7 +11,7 @@ encoding_binary -exclude PutUvarint,PutVarint
 bufio -exclude ScanBytes -limits NewReaderSize.size
 container_ring -limits RingNgdotMove.n,New.n,RingNgdotUnlink.n
 crypto_rand -limits Prime.bits
-crypto_rsa -limits Prime.nprimes,GenerateMultiPrimeKey.nprimes,GenerateMultiPrimeKey.nbits,GenerateKey.bits
+crypto_rsa -limits Prime.nprimes,GenerateMultiPrimeKey.nprimes,GenerateMultiPrimeKey.bits,GenerateKey.bits
 strconv -limits FormatFloat.prec,AppendFloat.prec
 strings -limits Repeat.count
 bytes -limits Repeat.count,BufferNgdotGrow.n -exclude Next
@@ -22,4 +22,4 @@ text_template_parse -exclude ActionNode
 go_ast -exclude InterfaceType
 crypto_cipher -exclude StreamReader
 encoding_asn1 -exclude BitString
-math_big -exclude Quo -limits FloatNgdotSetMantExp.exp,IntNgdotBinomial.k,IntNgdotBinomial.n
+math_big -exclude Quo -limits FloatNgdotSetMantExp.exp,IntNgdotBinomial.k,IntNgdotBinomial.n,RatNgdotFloatString.n,FloatNgdotText.prec
