@@ -8,7 +8,7 @@ text_template -exclude ParseGlob
 path_filepath -exclude Glob
 math_bits -exclude Div,Rem
 encoding_binary -exclude PutUvarint,PutVarint
-bufio -exclude ScanBytes -limits NewReaderSize.size
+bufio -exclude ScanBytes -limits NewReaderSize.size,NewWriterSize.size
 container_ring -limits RingNgdotMove.n,New.n,RingNgdotUnlink.n
 crypto_rand -limits Prime.bits
 crypto_rsa -limits Prime.nprimes,GenerateMultiPrimeKey.nprimes,GenerateMultiPrimeKey.bits,GenerateKey.bits
@@ -22,4 +22,4 @@ text_template_parse -exclude ActionNode
 go_ast -exclude InterfaceType
 crypto_cipher -exclude StreamReader
 encoding_asn1 -exclude BitString
-math_big -exclude Quo -limits FloatNgdotSetMantExp.exp,IntNgdotBinomial.k,IntNgdotBinomial.n,RatNgdotFloatString.n,FloatNgdotText.prec
+math_big -exclude Quo -limits FloatNgdotSetMantExp.exp,IntNgdotBinomial.k,IntNgdotBinomial.n,RatNgdotFloatString.prec,FloatNgdotText.prec
