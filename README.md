@@ -96,4 +96,4 @@ TODOs
 * Complete duggy for testing
 * Check all std library builds (like implement `io.ReadWriterCloser`)
 * Implement a more focused version on only one function, building the necessary arguments for it through code generation if needed
-
+* Builds corpus/dictionary out of unit tests: hook functions (especially ones with string or []byte args), output data, and convert it to protobuf format
