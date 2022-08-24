@@ -22,4 +22,4 @@ text_template_parse -exclude ActionNode
 go_ast -exclude InterfaceType
 crypto_cipher -exclude StreamReader
 encoding_asn1 -exclude BitString
-math_big -exclude Quo -limits FloatNgdotSetMantExp.exp,IntNgdotBinomial.k,IntNgdotBinomial.n,RatNgdotFloatString.prec,FloatNgdotText.prec
+math_big -exclude Quo -limits FloatNgdotSetMantExp.exp,IntNgdotBinomial.k,IntNgdotBinomial.n,RatNgdotFloatString.prec,FloatNgdotText.prec,FloatNgdotAppend.prec
