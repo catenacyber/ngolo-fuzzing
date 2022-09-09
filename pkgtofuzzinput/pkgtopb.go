@@ -36,7 +36,6 @@ type PkgFuncArg struct {
 	Proto     PkgFuncArgClass
 	Prefix    string
 	Suffix    string
-	nbprints  int
 }
 
 type PkgFuncResult struct {
@@ -710,6 +709,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 		}
 		formatArgs := make([]string, 0, 16)
 		w.WriteString("\t\t\tw.WriteString(fmt.Sprintf(\"")
+		nbprints := make(map[string]int)
 		if useReturn {
 			comma := false
 			for a := range m.Returns {
@@ -734,7 +734,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 			} else {
 				w.WriteString(fmt.Sprintf("%s%%d.", m.Args[0].FieldType))
 				formatArgs = append(formatArgs, fmt.Sprintf("%sResultsIndex", m.Args[0].FieldType))
-				m.Args[0].nbprints = 1
+				nbprints[m.Args[0].FieldType] = 1
 			}
 		} else {
 			w.WriteString(fmt.Sprintf("%s.", pkgImportName))
@@ -763,8 +763,9 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 				formatArgs = append(formatArgs, fmt.Sprintf("a.%s%s.%s", m.Recv, m.Name, strings.Title(m.Args[a].Name)))
 			case PkgFuncArgClassPkgGen:
 				w.WriteString(fmt.Sprintf("%s%%d", m.Args[a].FieldType))
-				formatArgs = append(formatArgs, fmt.Sprintf("(%sResultsIndex + %d) %% %sNb", m.Args[a].FieldType, m.Args[a].nbprints, m.Args[a].FieldType))
-				m.Args[a].nbprints = m.Args[a].nbprints + 1
+				nbprint := nbprints[m.Args[a].FieldType]
+				formatArgs = append(formatArgs, fmt.Sprintf("(%sResultsIndex + %d) %% %sNb", m.Args[a].FieldType, nbprint, m.Args[a].FieldType))
+				nbprints[m.Args[a].FieldType] = nbprint + 1
 			}
 			_, ok := limitsMap[fmt.Sprintf("%s%s.%s", m.Recv, m.Name, m.Args[a].Name)]
 			if ok {
@@ -787,9 +788,8 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 			}
 		}
 		for a := range m.Args {
-			if m.Args[a].Proto == PkgFuncArgClassPkgGen && m.Args[a].nbprints > 0 {
-				w.WriteString(fmt.Sprintf("\t\t\t%sResultsIndex = (%sResultsIndex + %d) %% %sNb\n", m.Args[a].FieldType, m.Args[a].FieldType, m.Args[a].nbprints, m.Args[a].FieldType))
-				m.Args[a].nbprints = 0
+			if m.Args[a].Proto == PkgFuncArgClassPkgGen {
+				w.WriteString(fmt.Sprintf("\t\t\t%sResultsIndex = (%sResultsIndex + 1) %% %sNb\n", m.Args[a].FieldType, m.Args[a].FieldType, m.Args[a].FieldType))
 			}
 		}
 	}
