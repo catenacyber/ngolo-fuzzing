@@ -734,7 +734,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 			} else {
 				w.WriteString(fmt.Sprintf("%s%%d.", m.Args[0].FieldType))
 				formatArgs = append(formatArgs, fmt.Sprintf("%sResultsIndex", m.Args[0].FieldType))
-				m.Args[a].nbprints = 1
+				m.Args[0].nbprints = 1
 			}
 		} else {
 			w.WriteString(fmt.Sprintf("%s.", pkgImportName))
@@ -763,7 +763,7 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 				formatArgs = append(formatArgs, fmt.Sprintf("a.%s%s.%s", m.Recv, m.Name, strings.Title(m.Args[a].Name)))
 			case PkgFuncArgClassPkgGen:
 				w.WriteString(fmt.Sprintf("%s%%d", m.Args[a].FieldType))
-				formatArgs = append(formatArgs, fmt.Sprintf("%sResultsIndex + %d", m.Args[a].FieldType, m.Args[a].nbprints))
+				formatArgs = append(formatArgs, fmt.Sprintf("(%sResultsIndex + %d) %% %sNb", m.Args[a].FieldType, m.Args[a].nbprints, m.Args[a].FieldType))
 				m.Args[a].nbprints = m.Args[a].nbprints + 1
 			}
 			_, ok := limitsMap[fmt.Sprintf("%s%s.%s", m.Recv, m.Name, m.Args[a].Name)]
@@ -784,12 +784,6 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 				if m.Returns[a].Used && m.Returns[a].FieldType != "error" {
 					w.WriteString(fmt.Sprintf("\t\t\t%sNb = %sNb + 1\n", m.Returns[a].FieldType, m.Returns[a].FieldType))
 				}
-			}
-		}
-		if len(m.Recv) > 0 {
-			if m.Args[0].Proto != PkgFuncArgClassPkgConst && m.Args[0].Proto != PkgFuncArgClassPkgStruct {
-				w.WriteString(fmt.Sprintf("\t\t\t%sResultsIndex = (%sResultsIndex + %d) %% %sNb\n", m.Args[a].FieldType, m.Args[a].FieldType, m.Args[a].nbprints, m.Args[a].FieldType))
-				m.Args[a].nbprints = 0
 			}
 		}
 		for a := range m.Args {
