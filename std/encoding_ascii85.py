@@ -2,7 +2,7 @@
 import sys
 
 # special patch as ascii85.Encode needs some length
-patch='''			a.Encode.Dst = make([]byte, MaxEncodedLen(len(a.Encode.Src)))'''
+patch='''			a.Encode.Dst = make([]byte, ascii85.MaxEncodedLen(len(a.Encode.Src)))'''
 
 f = open(sys.argv[1])
 patched = False
