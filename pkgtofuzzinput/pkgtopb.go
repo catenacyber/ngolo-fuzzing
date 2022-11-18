@@ -1199,7 +1199,7 @@ func PackageToProtobufMessagesDescription(pkg *packages.Package, exclude string)
 					for l := range f.Type.Params.List {
 						class, name := GolangArgumentClassName(f.Type.Params.List[l].Type)
 						if class == PkgFuncArgClassUnknown {
-							log.Printf("Unhandled argument %#+v for %s%s", f.Type.Params.List[l].Type, pfpm.Recv, f.Name.Name)
+							log.Printf("Unknown argument %#+v for %s%s", f.Type.Params.List[l].Type, pfpm.Recv, f.Name.Name)
 							return r, fmt.Errorf("Unknown argument %#+v for %s", f.Type.Params.List[l].Type, f.Name.Name)
 						} else if class == PkgFuncArgClassUnhandled {
 							log.Printf("Unhandled argument %#+v for %s%s", f.Type.Params.List[l].Type, pfpm.Recv, f.Name.Name)
