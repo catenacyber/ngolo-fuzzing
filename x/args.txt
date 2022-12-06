@@ -1,1 +1,1 @@
-currency -exclude MustParseISO
+x_currency -exclude MustParseISO
