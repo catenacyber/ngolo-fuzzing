@@ -1,4 +1,4 @@
-regexp -exclude Must,Expand
+regexp -exclude Must,Expand,ReplaceAll
 net_netip -exclude Must
 net_http -exclude ListenAndServe
 runtime -exclude Goexit,ReadTrace,GOMAXPROCS,StopTrace,SetFinalizer
