@@ -1,2 +1,2 @@
-x_currency -exclude MustParseISO
-x_vector -limits NewRasterizer.h,NewRasterizer.w
+x_text_currency -exclude MustParseISO
+x_image_vector -limits NewRasterizer.h,NewRasterizer.w
