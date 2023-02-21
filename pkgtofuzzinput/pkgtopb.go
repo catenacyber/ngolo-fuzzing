@@ -800,6 +800,55 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 	return nil
 }
 
+func pkgFunCorpusable(f *ast.FuncDecl, descr PkgDescription) bool {
+	if f.Recv == nil {
+		interesting := false
+		possible := true
+		for f2 := range descr.Functions {
+			if len(descr.Functions[f2].Recv) == 0 && descr.Functions[f2].Name == f.Name.String() {
+				for a := range descr.Functions[f2].Args {
+					switch descr.Functions[f2].Args[a].FieldType {
+					case "string", "io.ReaderAt":
+						interesting = true
+					default:
+						possible = false
+					}
+				}
+				break
+			}
+		}
+		return interesting && possible
+	}
+	return false
+}
+
+func PackageToCorpus(pkg *packages.Package, descr PkgDescription, outdir string) error {
+	for s := range pkg.Syntax {
+		for d := range pkg.Syntax[s].Decls {
+			switch f := pkg.Syntax[s].Decls[d].(type) {
+			case *ast.FuncDecl:
+				if pkgFunCorpusable(f, descr) {
+					fmt.Printf("lol %s %s\n", pkg.CompiledGoFiles[s], f.Body)
+					//TODO add ast to function body
+					/*
+					ngolo_r, _ := io.ReadAll(r)
+					ngolo_item := NgoloFuzzOne_NewFile{NewFile: &NewFileArgs{R: ngolo_r}}
+					//ngolo_list := &NgoloFuzzOne{Item: ngolo_item}
+					//ngolo_fuzz := NgoloFuzzList{List: {ngolo_list}}
+					//TODO marshaller and save to corpus directory
+					NgoloCorpusMarshal(ngolo_item)
+					r = bytes.NewReader(bytes.NewBuffer(r))
+					*/
+					//TODO save ast
+				}
+			}
+		}
+	}
+	// TODO run go test
+	// TODO git checkout -- .
+	return nil
+}
+
 func PackageToFuzzer(pkgname string, outdir string, exclude string, limits string) error {
 	pkg, err := PackageFromName(pkgname)
 	if err != nil {
@@ -848,11 +897,22 @@ func PackageToFuzzer(pkgname string, outdir string, exclude string, limits strin
 	}
 	f.Close()
 
+	cdir := filepath.Join(ngdir, "corpus")
+	err = os.MkdirAll(cdir, 0777)
+	if err != nil {
+		log.Printf("Failed creating dir %s : %s", cdir, err)
+		return err
+	}
+	err = PackageToCorpus(pkg, descr, cdir)
+	if err != nil {
+		log.Printf("Failed creating corpus : %s", err)
+	}
+
 	return nil
 }
 
 func PackageFromName(pkgname string) (*packages.Package, error) {
-	cfg := &packages.Config{Mode: packages.NeedFiles | packages.NeedSyntax}
+	cfg := &packages.Config{Mode: packages.NeedFiles | packages.NeedSyntax | packages.NeedCompiledGoFiles}
 	pkgs, err := packages.Load(cfg, pkgname)
 	if err != nil {
 		return nil, err
