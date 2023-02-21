@@ -1,6 +1,7 @@
 package pkgtofuzzinput
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"log"
@@ -800,6 +801,90 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 	return nil
 }
 
+func pkgFunCorpusable(funcname string, decls []ast.Decl, descr PkgDescription) (bool, *PkgFunction) {
+	for d := range decls {
+		switch f := decls[d].(type) {
+		case *ast.FuncDecl:
+			if f.Recv == nil && f.Name.String() == funcname {
+				interesting := false
+				possible := true
+				for f2 := range descr.Functions {
+					if len(descr.Functions[f2].Recv) == 0 && descr.Functions[f2].Name == f.Name.String() {
+						for a := range descr.Functions[f2].Args {
+							switch descr.Functions[f2].Args[a].FieldType {
+							case "string", "io.ReaderAt", "io.Reader", "bufio.Reader":
+								interesting = true
+							default:
+								possible = false
+							}
+						}
+						return (interesting && possible), &descr.Functions[f2]
+					}
+				}
+			}
+		}
+	}
+	return false, nil
+}
+
+func PackageToCorpus(pkg *packages.Package, descr PkgDescription, outdir string) error {
+	for s := range pkg.Syntax {
+		file, err := os.Open(pkg.CompiledGoFiles[s])
+		if err != nil {
+			log.Printf("Failed reading file : %s", err)
+			return err
+		}
+		// create a copy of the file, just adding some lines in it
+		fcopy, err := os.Create(filepath.Join(outdir, filepath.Base(pkg.CompiledGoFiles[s])))
+		if err != nil {
+			log.Printf("Failed creating file : %s", err)
+			return err
+		}
+
+		scanner := bufio.NewScanner(file)
+		// optionally, resize scanner's capacity for lines over 64K, see next example
+		for scanner.Scan() {
+			l := scanner.Text()
+			fcopy.WriteString(l + "\n")
+			if strings.HasPrefix(l, "func ") {
+				funcname := strings.Split(l[5:], "(")[0]
+				ok, nfun := pkgFunCorpusable(funcname, pkg.Syntax[s].Decls, descr)
+				// if function can generate an item for corpus let's do it
+				if ok {
+					mline := fmt.Sprintf("NgoloCorpusMarshal(&NgoloFuzzOne_%s{%s: &%sArgs{", funcname, funcname, funcname)
+					for a := range nfun.Args {
+						argname := nfun.Args[a].Name
+						switch nfun.Args[a].FieldType {
+						case "io.ReaderAt":
+							fcopy.WriteString(fmt.Sprintf("ngolo_%s, _ := io.ReadAll(io.NewSectionReader(%s, 0, 0x100000))\n", nfun.Args[a].Name, nfun.Args[a].Name))
+							argname = "ngolo_" + argname
+						case "io.Reader", "bufio.Reader":
+							fcopy.WriteString(fmt.Sprintf("ngolo_%s, _ := io.ReadAll(%s)\n", nfun.Args[a].Name, nfun.Args[a].Name))
+							argname = "ngolo_" + argname
+						}
+						if a > 0 {
+							mline = mline + ", "
+						}
+						mline = mline + fmt.Sprintf("%s: %s", TitleCase(nfun.Args[a].Name), argname)
+					}
+					mline = mline + "}})\n"
+					fcopy.WriteString(mline)
+					for a := range nfun.Args {
+						switch nfun.Args[a].FieldType {
+						case "io.ReaderAt", "io.Reader", "bufio.Reader":
+							fcopy.WriteString(fmt.Sprintf("%s = bytes.NewReader(ngolo_%s)\n", nfun.Args[a].Name, nfun.Args[a].Name))
+						}
+					}
+				}
+			}
+		}
+
+		file.Close()
+		fcopy.Close()
+	}
+	return nil
+}
+
 func PackageToFuzzer(pkgname string, outdir string, exclude string, limits string) error {
 	pkg, err := PackageFromName(pkgname)
 	if err != nil {
@@ -848,11 +933,22 @@ func PackageToFuzzer(pkgname string, outdir string, exclude string, limits strin
 	}
 	f.Close()
 
+	cdir := filepath.Join(ngdir, "corpus")
+	err = os.MkdirAll(cdir, 0777)
+	if err != nil {
+		log.Printf("Failed creating dir %s : %s", cdir, err)
+		return err
+	}
+	err = PackageToCorpus(pkg, descr, ngdir)
+	if err != nil {
+		log.Printf("Failed creating corpus : %s", err)
+	}
+
 	return nil
 }
 
 func PackageFromName(pkgname string) (*packages.Package, error) {
-	cfg := &packages.Config{Mode: packages.NeedFiles | packages.NeedSyntax}
+	cfg := &packages.Config{Mode: packages.NeedFiles | packages.NeedSyntax | packages.NeedCompiledGoFiles}
 	pkgs, err := packages.Load(cfg, pkgname)
 	if err != nil {
 		return nil, err
