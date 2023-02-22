@@ -870,7 +870,7 @@ func PackageToCorpus(pkg *packages.Package, descr PkgDescription, outdir string)
 					for a := range nfun.Args {
 						switch nfun.Args[a].FieldType {
 						case "io.ReaderAt", "io.Reader", "bufio.Reader":
-							fcopy.WriteString(fmt.Sprintf("%s = bytes.NewReader(bytes.NewBuffer(ngolo_%s))\n", nfun.Args[a].Name, nfun.Args[a].Name))
+							fcopy.WriteString(fmt.Sprintf("%s = bytes.NewReader(ngolo_%s)\n", nfun.Args[a].Name, nfun.Args[a].Name))
 						}
 					}
 				}
