@@ -1,6 +1,7 @@
 package pkgtofuzzinput
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"log"
@@ -800,52 +801,82 @@ func PackageToFuzzTarget(pkg *packages.Package, descr PkgDescription, w io.Strin
 	return nil
 }
 
-func pkgFunCorpusable(f *ast.FuncDecl, descr PkgDescription) bool {
-	if f.Recv == nil {
-		interesting := false
-		possible := true
-		for f2 := range descr.Functions {
-			if len(descr.Functions[f2].Recv) == 0 && descr.Functions[f2].Name == f.Name.String() {
-				for a := range descr.Functions[f2].Args {
-					switch descr.Functions[f2].Args[a].FieldType {
-					case "string", "io.ReaderAt":
-						interesting = true
-					default:
-						possible = false
+func pkgFunCorpusable(funcname string, decls []ast.Decl, descr PkgDescription) (bool, *PkgFunction) {
+	for d := range decls {
+		switch f := decls[d].(type) {
+		case *ast.FuncDecl:
+			if f.Recv == nil && f.Name.String() == funcname {
+				interesting := false
+				possible := true
+				for f2 := range descr.Functions {
+					if len(descr.Functions[f2].Recv) == 0 && descr.Functions[f2].Name == f.Name.String() {
+						for a := range descr.Functions[f2].Args {
+							switch descr.Functions[f2].Args[a].FieldType {
+							case "string", "io.ReaderAt":
+								interesting = true
+							default:
+								possible = false
+							}
+						}
+						return (interesting && possible), &descr.Functions[f2]
 					}
 				}
-				break
 			}
 		}
-		return interesting && possible
 	}
-	return false
+	return false, nil
 }
 
 func PackageToCorpus(pkg *packages.Package, descr PkgDescription, outdir string) error {
 	for s := range pkg.Syntax {
-		for d := range pkg.Syntax[s].Decls {
-			switch f := pkg.Syntax[s].Decls[d].(type) {
-			case *ast.FuncDecl:
-				if pkgFunCorpusable(f, descr) {
-					fmt.Printf("lol %s %s\n", pkg.CompiledGoFiles[s], f.Body)
-					//TODO add ast to function body
-					/*
-					ngolo_r, _ := io.ReadAll(r)
-					ngolo_item := NgoloFuzzOne_NewFile{NewFile: &NewFileArgs{R: ngolo_r}}
-					//ngolo_list := &NgoloFuzzOne{Item: ngolo_item}
-					//ngolo_fuzz := NgoloFuzzList{List: {ngolo_list}}
-					//TODO marshaller and save to corpus directory
-					NgoloCorpusMarshal(ngolo_item)
-					r = bytes.NewReader(bytes.NewBuffer(r))
-					*/
-					//TODO save ast
+		file, err := os.Open(pkg.CompiledGoFiles[s])
+		if err != nil {
+			log.Printf("Failed reading file : %s", err)
+			return err
+		}
+		fcopy, err := os.Create(filepath.Join(outdir, filepath.Base(pkg.CompiledGoFiles[s])))
+		if err != nil {
+			log.Printf("Failed creating file : %s", err)
+			return err
+		}
+
+		scanner := bufio.NewScanner(file)
+		// optionally, resize scanner's capacity for lines over 64K, see next example
+		for scanner.Scan() {
+			l := scanner.Text()
+			fcopy.WriteString(l + "\n")
+			if strings.HasPrefix(l, "func ") {
+				funcname := strings.Split(l[5:], "(")[0]
+				ok, nfun := pkgFunCorpusable(funcname, pkg.Syntax[s].Decls, descr)
+				if ok {
+					mline := fmt.Sprintf("NgoloCorpusMarshal(NgoloFuzzOne_%s{%s: &%sArgs{", funcname, funcname, funcname)
+					for a := range nfun.Args {
+						argname := nfun.Args[a].Name
+						switch nfun.Args[a].FieldType {
+						case "io.ReaderAt":
+							fcopy.WriteString(fmt.Sprintf("ngolo_%s, _ := io.ReadAll(%s)\n", nfun.Args[a].Name, nfun.Args[a].Name))
+							argname = "ngolo_" + argname
+						}
+						if a > 0 {
+							mline = mline + ", "
+						}
+						mline = mline + fmt.Sprintf("%s: %s", TitleCase(nfun.Args[a].Name), argname)
+					}
+					mline = mline + "}})\n"
+					fcopy.WriteString(mline)
+					for a := range nfun.Args {
+						switch nfun.Args[a].FieldType {
+						case "io.ReaderAt":
+							fcopy.WriteString(fmt.Sprintf("%s = bytes.NewReader(bytes.NewBuffer(ngolo_%s))\n", nfun.Args[a].Name, nfun.Args[a].Name))
+						}
+					}
 				}
 			}
 		}
+
+		file.Close()
+		fcopy.Close()
 	}
-	// TODO run go test
-	// TODO git checkout -- .
 	return nil
 }
 
@@ -903,7 +934,7 @@ func PackageToFuzzer(pkgname string, outdir string, exclude string, limits strin
 		log.Printf("Failed creating dir %s : %s", cdir, err)
 		return err
 	}
-	err = PackageToCorpus(pkg, descr, cdir)
+	err = PackageToCorpus(pkg, descr, ngdir)
 	if err != nil {
 		log.Printf("Failed creating corpus : %s", err)
 	}
