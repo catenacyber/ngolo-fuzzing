@@ -853,7 +853,10 @@ func PackageToCorpus(pkg *packages.Package, descr PkgDescription, outdir string)
 					for a := range nfun.Args {
 						argname := nfun.Args[a].Name
 						switch nfun.Args[a].FieldType {
-						case "io.ReaderAt", "io.Reader", "bufio.Reader":
+						case "io.ReaderAt":
+							fcopy.WriteString(fmt.Sprintf("ngolo_%s, _ := io.ReadAll(io.NewSectionReader(%s, 0, 0x100000))\n", nfun.Args[a].Name, nfun.Args[a].Name))
+							argname = "ngolo_" + argname
+						case "io.Reader", "bufio.Reader":
 							fcopy.WriteString(fmt.Sprintf("ngolo_%s, _ := io.ReadAll(%s)\n", nfun.Args[a].Name, nfun.Args[a].Name))
 							argname = "ngolo_" + argname
 						}
