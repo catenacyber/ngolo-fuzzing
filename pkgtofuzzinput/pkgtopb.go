@@ -812,7 +812,7 @@ func pkgFunCorpusable(funcname string, decls []ast.Decl, descr PkgDescription) (
 					if len(descr.Functions[f2].Recv) == 0 && descr.Functions[f2].Name == f.Name.String() {
 						for a := range descr.Functions[f2].Args {
 							switch descr.Functions[f2].Args[a].FieldType {
-							case "string", "io.ReaderAt":
+							case "string", "io.ReaderAt", "io.Reader", "bufio.Reader":
 								interesting = true
 							default:
 								possible = false
@@ -853,7 +853,7 @@ func PackageToCorpus(pkg *packages.Package, descr PkgDescription, outdir string)
 					for a := range nfun.Args {
 						argname := nfun.Args[a].Name
 						switch nfun.Args[a].FieldType {
-						case "io.ReaderAt":
+						case "io.ReaderAt", "io.Reader", "bufio.Reader":
 							fcopy.WriteString(fmt.Sprintf("ngolo_%s, _ := io.ReadAll(%s)\n", nfun.Args[a].Name, nfun.Args[a].Name))
 							argname = "ngolo_" + argname
 						}
@@ -866,7 +866,7 @@ func PackageToCorpus(pkg *packages.Package, descr PkgDescription, outdir string)
 					fcopy.WriteString(mline)
 					for a := range nfun.Args {
 						switch nfun.Args[a].FieldType {
-						case "io.ReaderAt":
+						case "io.ReaderAt", "io.Reader", "bufio.Reader":
 							fcopy.WriteString(fmt.Sprintf("%s = bytes.NewReader(bytes.NewBuffer(ngolo_%s))\n", nfun.Args[a].Name, nfun.Args[a].Name))
 						}
 					}
