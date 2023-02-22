@@ -849,7 +849,7 @@ func PackageToCorpus(pkg *packages.Package, descr PkgDescription, outdir string)
 				funcname := strings.Split(l[5:], "(")[0]
 				ok, nfun := pkgFunCorpusable(funcname, pkg.Syntax[s].Decls, descr)
 				if ok {
-					mline := fmt.Sprintf("NgoloCorpusMarshal(NgoloFuzzOne_%s{%s: &%sArgs{", funcname, funcname, funcname)
+					mline := fmt.Sprintf("NgoloCorpusMarshal(&NgoloFuzzOne_%s{%s: &%sArgs{", funcname, funcname, funcname)
 					for a := range nfun.Args {
 						argname := nfun.Args[a].Name
 						switch nfun.Args[a].FieldType {
