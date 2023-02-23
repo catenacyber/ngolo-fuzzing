@@ -939,7 +939,13 @@ func PackageToFuzzer(pkgname string, outdir string, exclude string, limits strin
 		log.Printf("Failed creating dir %s : %s", cdir, err)
 		return err
 	}
-	err = PackageToCorpus(pkg, descr, ngdir)
+	copydir := filepath.Join(ngdir, "copy")
+	err = os.MkdirAll(copydir, 0777)
+	if err != nil {
+		log.Printf("Failed creating dir %s : %s", copydir, err)
+		return err
+	}
+	err = PackageToCorpus(pkg, descr, copydir)
 	if err != nil {
 		log.Printf("Failed creating corpus : %s", err)
 	}
