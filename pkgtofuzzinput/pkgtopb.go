@@ -814,6 +814,8 @@ func pkgFunCorpusable(funcname string, decls []ast.Decl, descr PkgDescription) (
 							switch descr.Functions[f2].Args[a].FieldType {
 							case "string", "io.ReaderAt", "io.Reader", "bufio.Reader":
 								interesting = true
+							case "int64":
+								// still possible
 							default:
 								possible = false
 							}
@@ -855,6 +857,9 @@ func PackageToCorpus(pkg *packages.Package, descr PkgDescription, outdir string)
 					for a := range nfun.Args {
 						argname := nfun.Args[a].Name
 						switch nfun.Args[a].FieldType {
+						case "int64":
+							fcopy.WriteString(fmt.Sprintf("ngolo_%s := int64(%s)\n", nfun.Args[a].Name, nfun.Args[a].Name))
+							argname = "ngolo_" + argname
 						case "io.ReaderAt":
 							fcopy.WriteString(fmt.Sprintf("ngolo_%s, _ := io.ReadAll(io.NewSectionReader(%s, 0, 0x100000))\n", nfun.Args[a].Name, nfun.Args[a].Name))
 							argname = "ngolo_" + argname
