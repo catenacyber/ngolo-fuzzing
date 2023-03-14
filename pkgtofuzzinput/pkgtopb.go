@@ -189,6 +189,8 @@ func GolangArgumentClassName(e ast.Expr) (PkgFuncArgClass, string) {
 			switch se {
 			case "io.RuneReader", "io.ReaderAt", "io.Reader", "io.Writer", "bufio.Reader", "net.Conn":
 				return PkgFuncArgClassProtoGen, se
+			case "image.Image":
+				return PkgFuncArgClassPkgGen, se
 			}
 		}
 	}
@@ -1155,6 +1157,26 @@ func PackageToProtobufMessagesDescription(pkg *packages.Package, exclude string)
 		}
 	}
 
+	for s := range pkg.Syntax {
+		for d := range pkg.Syntax[s].Decls {
+			switch f := pkg.Syntax[s].Decls[d].(type) {
+			case *ast.FuncDecl:
+				if funcToUse(f.Name.Name, excludes) {
+					if f.Type.Results != nil {
+						for l := range f.Type.Results.List {
+							name, ok := astGetName(f.Type.Results.List[l].Type)
+							if ok && len(name) > 0 && strings.Contains(name, ".") {
+								_, isarray := f.Type.Results.List[l].Type.(*ast.ArrayType)
+								if !isarray {
+									typesMap[name] = FNG_TYPE_RESULT
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 	//second loop to check if they are both read and used
 	for s := range pkg.Syntax {
 		for d := range pkg.Syntax[s].Decls {
