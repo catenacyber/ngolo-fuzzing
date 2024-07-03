@@ -1,6 +1,6 @@
 module github.com/catenacyber/ngolo-fuzzing
 
-go 1.17
+go 1.22
 
 require (
 	golang.org/x/tools v0.1.9
