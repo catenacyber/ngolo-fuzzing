@@ -24,3 +24,4 @@ crypto_cipher -exclude StreamReader
 encoding_asn1 -exclude BitString
 math_big -exclude Quo -limits FloatNgdotSetMantExp.exp,IntNgdotBinomial.k,IntNgdotBinomial.n,IntNgdotProbablyPrime.n,RatNgdotFloatString.prec,FloatNgdotText.prec,FloatNgdotAppend.prec,IntNgdotSetBit.i
 text_tabwriter -limits NewWriter.padding
+crypto_sha3 -limits SumSHAKE128.length,SumSHAKE256.length
