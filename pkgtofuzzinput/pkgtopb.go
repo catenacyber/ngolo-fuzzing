@@ -1357,7 +1357,9 @@ func PackageToProtobufMessagesDescription(pkg *packages.Package, exclude string)
 						for l := range f.Type.Results.List {
 							name, ok := astGetName(f.Type.Results.List[l].Type)
 							if !ok {
-								return r, fmt.Errorf("Unhandled result %#+v for %s", f.Type.Results.List[l].Type, f.Name.Name)
+								log.Printf("Unhandled result %#+v for %s", f.Type.Results.List[l].Type, f.Name.Name)
+								pfpm.Returns = []PkgFuncResult{}
+								break
 							}
 							v, ok := typesMap[name]
 							pfr := PkgFuncResult{}
