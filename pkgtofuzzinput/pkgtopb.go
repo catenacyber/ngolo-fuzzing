@@ -389,6 +389,10 @@ func GetRune(s string) rune {
 `
 
 const fuzzTarget3 = `func FuzzNG_valid(data []byte) int {
+	if len(data) > 0x40000 {
+		// 500 kilobytes input timeout in protobuf
+		return 0
+	}
 	gen := &NgoloFuzzList{}
 	err := proto.Unmarshal(data, gen)
 	if err != nil {
@@ -410,6 +414,10 @@ const fuzzTarget3 = `func FuzzNG_valid(data []byte) int {
 
 // we are unsure the input is a valid protobuf
 func FuzzNG_unsure(data []byte) int {
+	if len(data) > 0x40000 {
+		// 500 kilobytes input timeout in protobuf
+		return 0
+	}
 	gen := &NgoloFuzzList{}
 	err := proto.Unmarshal(data, gen)
 	if err != nil {
